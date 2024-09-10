@@ -1,23 +1,66 @@
 import cv2
 import numpy as np
+from pyparrot.Bebop import Bebop
 from typing import Union
 
 class InitializeConfig:
     _instance = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args, **kwargs) -> 'InitializeConfig':
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self, source: Union[int, str], fps: int = 5, dist: float = 0.025, length: int = 15) -> None:
-        self.cap = cv2.VideoCapture(source)
-        if not self.cap.isOpened():
-            print("Error: Could not open camera.")
-            exit()
+        """
+        Initializes the configuration object. Supports either a local camera or Bebop drone stream as the video source.
+        """
+        if source == 'bebop':  # New condition for Bebop drone
+            self.cap = Bebop()
+            success = self.cap.connect(100)  # Try to connect to the Bebop drone
+            if success:
+                self.cap.set_video_stream_mode()  # Set video stream resolution
+                self.cap.start_video_stream()
+                print("Bebop connected and video stream started.")
+            else:
+                print("Error: Could not connect to Bebop.")
+                exit()
+        else:
+            self.cap = cv2.VideoCapture(source)
+            if not self.cap.isOpened():
+                print("Error: Could not open camera.")
+                exit()
+
         self.fps = fps
         self.dist = dist
         self.length = length
+
+        while True:
+            frame = self.read_frame()
+            if frame is None:
+                break
+            cv2.imshow("Test", frame)
+            cv2.waitKey(100)
+        
+
+    def read_frame(self):
+        """
+        Reads a frame from the video source, either Bebop or local camera.
+        """
+        
+        if hasattr(self.cap, 'drone_type'):  # If we are using the Bebop
+            frame = self.cap.get_video_frame()
+            if frame is None:
+                print("Error: Could not retrieve frame from Bebop.")
+                return None
+            return frame
+        else:
+            ret, frame = self.cap.read()
+            if not ret:
+                print("Error: Could not retrieve frame from camera.")
+                return None
+            return frame
+
 
 class ModeFactory:
     @staticmethod

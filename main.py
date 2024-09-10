@@ -65,7 +65,8 @@ SPS = ServoPositionSystem(num_servos, pub_hor_rot, pub_ver_rot, dir_rot)
 
 grs = GestureRecognitionSystem(
         # config=InitializeConfig('http://192.168.209.199:81/stream'),
-        config=InitializeConfig(4,10),
+        # config=InitializeConfig(4,10),
+        config=InitializeConfig('bebop',10),
         operation=mode,
         file_handler=FileHandler(),
         current_folder=os.path.dirname(__file__),
