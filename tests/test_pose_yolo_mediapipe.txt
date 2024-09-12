@@ -1,4 +1,0 @@
-            aa = results_people[0].keypoints.xy.cpu().tolist()[0][9:11]
-            ttt = (1-aa[0][0]/frame.shape[1], aa[0][1]/frame.shape[0])
-            bb = self.hands_results.multi_hand_landmarks[0].landmark[0]
-            cc = self.pose_results.pose_landmarks.landmark[15:17]

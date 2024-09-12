@@ -1,7 +1,10 @@
 import cv2
+import os
 import numpy as np
 from pyparrot.Bebop import Bebop
-from typing import Union
+from pyparrot.DroneVision import DroneVision
+from ..auxiliary.Model import Model
+from typing import Union, Optional
 
 class InitializeConfig:
     _instance = None
@@ -15,51 +18,133 @@ class InitializeConfig:
         """
         Initializes the configuration object. Supports either a local camera or Bebop drone stream as the video source.
         """
-        if source == 'bebop':  # New condition for Bebop drone
-            self.cap = Bebop()
-            success = self.cap.connect(100)  # Try to connect to the Bebop drone
-            if success:
-                self.cap.set_video_stream_mode()  # Set video stream resolution
-                self.cap.start_video_stream()
-                print("Bebop connected and video stream started.")
-            else:
-                print("Error: Could not connect to Bebop.")
-                exit()
-        else:
-            self.cap = cv2.VideoCapture(source)
-            if not self.cap.isOpened():
-                print("Error: Could not open camera.")
-                exit()
-
+        self.cap = Camera(source, {'attempts': 100, "buffer_size": 10})
+        
         self.fps = fps
         self.dist = dist
         self.length = length
 
-        while True:
-            frame = self.read_frame()
-            if frame is None:
-                break
-            cv2.imshow("Test", frame)
-            cv2.waitKey(100)
-        
+    
 
-    def read_frame(self):
+
+class Camera:
+    def __init__(self, source:Union[int, str], param: Optional[dict] = None) -> None:
         """
-        Reads a frame from the video source, either Bebop or local camera.
+        Initializes the camera object with the specified parameters.
+
+        :param source: The source of the camera (RealSense, ESP32cam or Bebop drone).
+        :param param: The parameters for the camera.
         """
-        
-        if hasattr(self.cap, 'drone_type'):  # If we are using the Bebop
-            frame = self.cap.get_video_frame()
-            if frame is None:
-                print("Error: Could not retrieve frame from Bebop.")
-                return None
-            return frame
+        self.source = source
+        self.param = param
+        self.camera_initialize()
+
+    def camera_initialize(self):
+        """
+        Initializes the camera based on the source.
+        """
+        if self.source == "bebop":
+            self.bebop = Bebop()
+            self._define_parameters()
+            self._camera_prepare()
+            return self.user_vision
         else:
-            ret, frame = self.cap.read()
-            if not ret:
-                print("Error: Could not retrieve frame from camera.")
-                return None
-            return frame
+            self.cap = cv2.VideoCapture(self.source)
+            if not self.cap.isOpened():
+                print("Error: Could not open camera.")
+                exit()
+            return self.cap
+
+    def _define_parameters(self):
+        """
+        Defines the parameters for the Bebop drone camera.
+        """
+        self.attempts = self.param.get('attempts', 100)
+        self.buffer_size = self.param.get('buffer_size', 10)
+
+    def _camera_prepare(self):
+        """
+        Prepares the camera for capturing frames of bebop.
+        """
+        self.success = self.bebop.connect(self.attempts)
+        if not self.success:
+            print("Error: Could not connect to Bebop drone.")
+            exit()
+
+        self.bebop.set_video_stream_mode("low_latency")
+        self.bebop.set_video_framerate("24_FPS")
+        self.bebop.set_video_resolutions("rec720_stream720")
+        self.bebop.start_video_stream()
+
+        bebop_vision = DroneVision(
+            self.bebop, Model.BEBOP, buffer_size=self.buffer_size
+        )
+        self.user_vision = UserVision(bebop_vision)
+        self.image = bebop_vision.set_user_callback_function(
+            self.user_vision.show_image, user_callback_args=(True,)
+        )
+
+        self.success = bebop_vision.open_video()
+        if not self.success:
+            print("Error: Could not open video stream.")
+            exit()
+
+    def read(self):
+        """
+        Captures a frame from the camera.
+        """
+        if self.source == "bebop":
+            return self.success, self.image#_ self.bebop.get_frame()
+        else:
+            return self.cap.read()
+
+
+class UserVision:
+    def __init__(
+        self,
+        vision: DroneVision
+    ) -> None:
+        """
+        Initialize the UserVision class with a vision object.
+
+        :param vision: The DroneVision object responsible for image capture.
+        """
+        self.image_index = 1
+        self.vision = vision
+
+    def show(self, display_image):
+        """
+        Displays the image captured by the vision system.
+        """
+        image = self.vision.get_latest_valid_picture()
+        if display_image:
+            cv2.imshow("Captured Image", image)
+            cv2.waitKey(100)
+        return image
+
+    def save_image(
+        self,
+        args: tuple = (False, None)
+    ) -> None:
+        """
+        Saves the latest valid picture captured by the vision system.
+
+        :param args: Flag indicating whether to save the image or not and the path where the images should be saved.
+        """
+        image = self.vision.get_latest_valid_picture()
+        cv2.imshow("Captured Image", image)
+        cv2.waitKey(100)
+
+        if image is not None:
+            if args[0]:
+                if not os.path.exists(args[1]):
+                    os.makedirs(args[1])
+
+                filename = os.path.join(
+                    args[1], f"image_{self.image_index:04d}.png"
+                )
+                cv2.imwrite(filename, image)
+            self.image_index += 1
 
 
 class ModeFactory:

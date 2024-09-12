@@ -14,7 +14,7 @@ from .pdi.HolisticProcessor import  HolisticProcessor
 from .pdi.interfaces import InterfaceTrack
 from .pdi.interfaces import InterfaceFeature
 
-from .ros.ServoControl import CommunicationEspCam
+from .ros2.ImageTools import CommunicationEspCam
 
 from .system.GestureRecognitionSystem import GestureRecognitionSystem
 from .system.ServoPositionSystem import ServoPositionSystem

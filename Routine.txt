@@ -1,0 +1,18 @@
+# Instruções para iniciar a transmissão de informações pelo ROS do Bebop 2
+
+1 - Terminal Novo
+1.1 - cd bebop_ws
+1.2 - . devel/setup.bash
+1.3 - roscore
+
+2 - Bebop
+2.1 Ligar o bebop
+2.2 Conecta-lo na internet
+
+3 - Terminal Novo
+3.1 - cd bebop_ws
+3.2 - . devel/setup.bash
+3.3 - export ROS_IP=192.168.0.125
+3.4 - roslaunch bebop_driver bebop_node.launch
+
+
