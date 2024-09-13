@@ -77,24 +77,22 @@ if __name__ == '__main__':
 
     # Cria uma instância da classe ImageRawTools
     irt = ImageRawTools()
-
-    # Inscreve-se no tópico de imagem comprimida
-    rospy.Subscriber('/bebop/image_raw', Image, irt._image_raw_callback)
-    rospy.Subscriber('/bebop/image_raw/compressed', CompressedImage, irt._image_raw_compressed_callback)
+    irt.listening_image_raw()
+    irt.listening_image_raw_compressed()
 
     time.sleep(5)
     i=0
     start_time = time.time()
-    while time.time() - start_time < 5:
+    while time.time() - start_time < 20:
         i+=1
-        if irt.sucess_read:
+        if irt.image_sucess:
             cv2.imshow('/bebop/image_raw ', irt.image)
             cv2.waitKey(1)
+        if irt.image_compressed_sucess:
             cv2.imshow('/bebop/image_raw/compressed ', irt.image_compressed)
             cv2.waitKey(1)
-        else:
-            print(f'Image not available {i}')
-
+        if not (irt.image_sucess or irt.image_compressed_sucess):
+            print('No image received')
 
     cv2.destroyAllWindows()
 

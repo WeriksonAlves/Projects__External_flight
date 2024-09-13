@@ -14,6 +14,7 @@ ok /bebop/image_raw/theora
 
 
 import cv2
+import rospy
 
 import numpy as np
 
@@ -27,14 +28,13 @@ class ImageRawTools(object):
         sucess_read (bool): Indicates whether the image was successfully read.
     Methods:
         __init__() -> None:
-        _image_raw_callback(data: Image) -> None:
-        _image_raw_compressed_callback(data: CompressedImage) -> None:
-        _image_raw_compressed_depth_callback(data: CompressedImage) -> None:
-        _image_raw_theora_callback(data) -> None:
+        
+        
         __save_image(image: np.ndarray, filename: str) -> bool:
         __load_image(filename: str) -> np.ndarray:
-        read(image: np.ndarray, filename: str) -> Tuple[bool, np.ndarray]:
+        __read(image: np.ndarray, filename: str) -> Tuple[bool, np.ndarray]:
             :param image: The image to save and read.
+            :param filename: The filename to save and read the image to.
     """
 
     def __init__(self) -> None:
@@ -49,13 +49,40 @@ class ImageRawTools(object):
             image_theora (None): Placeholder for storing the Theora encoded image.
         """
         self.bridge = CvBridge()
+        self.image_sucess = False
         self.image = None
+        self.image_compressed_sucess = False
         self.image_compressed = None
+        self.image_compressed_depth_sucess = False
         self.image_compressed_depth = None
+        self.image_theora_sucess = False
         self.image_theora = None
-        self.sucess_read = False
 
-    def _image_raw_callback(self, data: Image) -> None:
+    def listening_image_raw(self) -> None:
+        """
+        Subscribes to the raw image topic.
+        """
+        rospy.Subscriber("/bebop/image_raw", Image, self._callback_image_raw)
+
+    def listening_image_raw_compressed(self) -> None:
+        """
+        Subscribes to the compressed image topic.
+        """
+        rospy.Subscriber("/bebop/image_raw/compressed", CompressedImage, self._callback_image_raw_compressed)
+
+    def listening_image_raw_compressed_Depth(self) -> None:
+        """
+        Subscribes to the compressed depth image topic.
+        """
+        rospy.Subscriber("/bebop/image_raw/compressedDepth", CompressedImage, self._callback_image_raw_compressed_depth)
+
+    def listening_image_raw_theora(self) -> None:
+        """
+        Subscribes to the Theora encoded image topic.
+        """
+        rospy.Subscriber("/bebop/image_raw/theora", CompressedImage, self._callback_image_raw_theora)
+
+    def _callback_image_raw(self, data: Image) -> None:
         """
         Callback function for the raw image topic.
         
@@ -64,12 +91,12 @@ class ImageRawTools(object):
 
         try:
             self.image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-            self.sucess_read, self.image = self.read(self.image, "/home/ubuntu/Imagens/test/image_raw.png")
+            self.image_sucess, self.image = self.__read(self.image, "/home/ubuntu/Imagens/test/image_raw.png")
         except CvBridgeError as e:
             self.sucess_read = False
             print(f"Error converting image: {e}")
 
-    def _image_raw_compressed_callback(self, data: CompressedImage) -> None:
+    def _callback_image_raw_compressed(self, data: CompressedImage) -> None:
         """
         Callback function for the compressed image topic.
         
@@ -80,11 +107,11 @@ class ImageRawTools(object):
             np_arr = np.fromstring(data.data, np.uint8)
             self.image_compressed = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
             filename = f"/home/ubuntu/Imagens/test/image_raw_compressed.png"
-            self.sucess_read, self.image = self.read(self.image_compressed, filename)
+            self.image_compressed_sucess, self.image_compressed = self.__read(self.image_compressed, filename)
         except Exception as e:
             print(f"Error decoding image: {e}")
 
-    def _image_raw_compressed_depth_callback(self, data: CompressedImage) -> None:
+    def _callback_image_raw_compressed_depth(self, data: CompressedImage) -> None:
         """
         Callback function for the compressed depth image topic.
         
@@ -95,11 +122,11 @@ class ImageRawTools(object):
             np_arr = np.fromstring(data.data, np.uint8)
             self.image_compressed_depth = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
             filename = f"/home/ubuntu/Imagens/test/image_raw_compressed_depth.png"
-            self.sucess_read, self.image = self.read(self.image_compressed_depth, filename)
+            self.image_compressed_depth_sucess, self.image_compressed_depth = self.__read(self.image_compressed_depth, filename)
         except Exception as e:
             print(f"Error decoding image: {e}")
 
-    def _image_raw_theora_callback(self, data):
+    def _callback_image_raw_theora(self, data):
         """
         Callback function for the Theora encoded image topic.
         
@@ -109,10 +136,9 @@ class ImageRawTools(object):
             np_arr = np.fromstring(data.data, np.uint8)
             self.image_theora = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
             filename = f"/home/ubuntu/Imagens/test/image_raw_theora.png"
-            #self.sucess_read, self.image = self.read(self.image_theora, filename)
+            self.image_theora_sucess, self.image_theora = self.__read(self.image_theora, filename)
         except Exception as e:
             print(f"Error decoding image: {e}")
-
 
     def __save_image(self, image: np.ndarray, filename: str) -> bool:
         """
@@ -139,7 +165,7 @@ class ImageRawTools(object):
 
         return cv2.imread(filename)
 
-    def read(self, image:np.ndarray, filename: str) -> Tuple[bool, np.ndarray]:
+    def __read(self, image:np.ndarray, filename: str) -> Tuple[bool, np.ndarray]:
         """
         Reads an image from a file.
         
