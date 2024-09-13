@@ -3,7 +3,7 @@ import rospy
 import cv2
 import os
 import numpy as np
-from cv_bridge import CvBridge, CvBridgeError
+# from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image, CompressedImage
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Empty, Float32
@@ -39,7 +39,7 @@ class DroneCamera:
         rospy.init_node('bebop_drone_camera', anonymous=True)
 
         # CvBridge object for ROS to OpenCV image conversion
-        self.bridge = CvBridge()
+        # self.bridge = CvBridge()
         
         # Image storage
         self.image: Optional[np.ndarray] = None
@@ -62,7 +62,7 @@ class DroneCamera:
         self.current_pan: float = 0.0
 
         # Subscribing to image topics
-        rospy.Subscriber("/bebop/image_raw", Image, self._process_raw_image)
+        # rospy.Subscriber("/bebop/image_raw", Image, self._process_raw_image)
         rospy.Subscriber("/bebop/image_raw/compressed", CompressedImage, self._process_compressed_image)
         rospy.Subscriber("/bebop/image_raw/compressedDepth", CompressedImage, self._process_compressed_depth_image)
         rospy.Subscriber("/bebop/image_raw/theora", CompressedImage, self._process_theora_image)
@@ -73,16 +73,16 @@ class DroneCamera:
         # Initialize parameter listener
         self.param_listener = ParameterListener(self)
 
-    def _process_raw_image(self, data: Image) -> None:
-        """
-        Processes raw image data and saves it to disk.
-        """
-        try:
-            image = self.bridge.imgmsg_to_cv2(data, "bgr8")
-            self.success_image, self.image = self._save_and_load_image(
-                image, os.path.join(self.file_path, "image_raw.png"))
-        except CvBridgeError as e:
-            rospy.logerr(f"Failed to convert raw image: {e}")
+    # def _process_raw_image(self, data: Image) -> None:
+    #     """
+    #     Processes raw image data and saves it to disk.
+    #     """
+    #     try:
+    #         image = self.bridge.imgmsg_to_cv2(data, "bgr8")
+    #         self.success_image, self.image = self._save_and_load_image(
+    #             image, os.path.join(self.file_path, "image_raw.png"))
+    #     except CvBridgeError as e:
+    #         rospy.logerr(f"Failed to convert raw image: {e}")
 
     def _process_compressed_image(self, data: CompressedImage) -> None:
         """

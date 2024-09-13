@@ -12,16 +12,16 @@
 /bebop/fix
 /bebop/flattrim
 /bebop/flip
-/bebop/image_raw
-/bebop/image_raw/compressed
-/bebop/image_raw/compressed/parameter_descriptions
-/bebop/image_raw/compressed/parameter_updates
-/bebop/image_raw/compressedDepth
-/bebop/image_raw/compressedDepth/parameter_descriptions
-/bebop/image_raw/compressedDepth/parameter_updates
-/bebop/image_raw/theora
-/bebop/image_raw/theora/parameter_descriptions
-/bebop/image_raw/theora/parameter_updates
+        /bebop/image_raw
+        /bebop/image_raw/compressed
+        /bebop/image_raw/compressed/parameter_descriptions
+        /bebop/image_raw/compressed/parameter_updates
+        /bebop/image_raw/compressedDepth
+        /bebop/image_raw/compressedDepth/parameter_descriptions
+        /bebop/image_raw/compressedDepth/parameter_updates
+        /bebop/image_raw/theora
+        /bebop/image_raw/theora/parameter_descriptions
+        /bebop/image_raw/theora/parameter_updates
 /bebop/joint_states
 /bebop/land
 /bebop/odom

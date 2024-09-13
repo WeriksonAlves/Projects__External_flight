@@ -1,10 +1,8 @@
-matplotlib==3.8.4
-mediapipe==0.10.14
-numpy==1.21.5
-opencv_contrib_python==4.9.0.80
-opencv_python==4.9.0.80
+cv_bridge==1.16.2
+dynamic_reconfigure==1.7.3
+numpy==1.24.4
+numpy==1.17.4
+opencv_python==4.10.0.84
 rospy==1.16.0
-scikit_learn==1.4.2
-ultralytics==8.2.14
-untangle==1.2.1
-zeroconf==0.20.0
+sensor_msgs==1.13.1
+ultralytics==8.2.93

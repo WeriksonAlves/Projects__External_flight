@@ -2,7 +2,7 @@
 
 import os
 
-from DroneCamera import DroneCamera
+from .DroneCamera import DroneCamera
 
 
 class BebopROS:
