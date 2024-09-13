@@ -58,7 +58,7 @@ import rospy
 import time
 from datetime import datetime
 from sensor_msgs.msg import CompressedImage, Image
-from ImageRawTools import ImageRawTools
+from ImageRawTools import ImageListener, ParameterListener
 from base import ImageTools
 
 # Criação de uma instância da classe ImageTools
@@ -70,33 +70,47 @@ output_dir = "/home/ubuntu/Documentos/Werikson/GitHub/env_master/Projects__Exter
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
-
-if __name__ == '__main__':
-    # Inicializa o nó ROS
-    rospy.init_node('recognition_system', anonymous=True)
-
-    # Cria uma instância da classe ImageRawTools
-    irt = ImageRawTools()
-    irt.listening_image_raw()
-    irt.listening_image_raw_compressed()
-
+def my_imshow(bit):
     time.sleep(5)
-    i=0
+    
     start_time = time.time()
-    while time.time() - start_time < 20:
-        i+=1
-        if irt.image_sucess:
-            cv2.imshow('/bebop/image_raw ', irt.image)
+    while time.time() - start_time < 15:
+        if bit.success_image:
+            cv2.imshow('/bebop/image_raw ', bit.image)
             cv2.waitKey(1)
-        if irt.image_compressed_sucess:
-            cv2.imshow('/bebop/image_raw/compressed ', irt.image_compressed)
+        if bit.success_compressed_image:
+            cv2.imshow('/bebop/image_raw/compressed ', bit.image_compressed)
             cv2.waitKey(1)
-        if not (irt.image_sucess or irt.image_compressed_sucess):
+        if not (bit.success_image or bit.success_compressed_image):
             print('No image received')
-
     cv2.destroyAllWindows()
 
-    # # Mantém o nó em execução
-    # rospy.spin()
+def main():
+    rospy.init_node('bebop_image_processor', anonymous=True)
+
+    DIR_NAME = os.path.dirname(__file__)
+
+    # Instanciar o listener de imagens
+    image_listener = ImageListener(DIR_NAME)
+
+    # Subscrever aos tópicos de imagens
+    image_listener.subscribe_to_image_raw()
+    image_listener.subscribe_to_image_raw_compressed()
+    my_imshow(image_listener)
+
+    # Instanciar o listener de parâmetros
+    parameter_listener = ParameterListener(image_listener)
+    
+    # Subscrever aos tópicos de descrição e atualizações de parâmetros
+    parameter_listener.subscribe_to_parameter_descriptions()
+    parameter_listener.subscribe_to_parameter_updates()
+
+    rospy.spin()  # Mantém o nó ativo enquanto as mensagens são processadas
+
+if __name__ == '__main__':
+    try:
+        main()
+    except rospy.ROSInterruptException:
+        pass
 
     
