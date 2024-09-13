@@ -1,18 +1,3 @@
-"""
-Class-related topics:
-ok /bebop/image_raw
-ok /bebop/image_raw/compressed
-    /bebop/image_raw/compressed/parameter_descriptions
-    /bebop/image_raw/compressed/parameter_updates
-ok /bebop/image_raw/compressedDepth
-    /bebop/image_raw/compressedDepth/parameter_descriptions
-    /bebop/image_raw/compressedDepth/parameter_updates
-ok /bebop/image_raw/theora
-    /bebop/image_raw/theora/parameter_descriptions
-    /bebop/image_raw/theora/parameter_updates
-"""
-
-
 import cv2
 import os
 import rospy

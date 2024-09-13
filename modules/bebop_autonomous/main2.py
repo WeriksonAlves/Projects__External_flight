@@ -14,16 +14,7 @@ rostopic lit
 /bebop/fix
 /bebop/flattrim
 /bebop/flip
-/bebop/image_raw
-/bebop/image_raw/compressed
-/bebop/image_raw/compressed/parameter_descriptions
-/bebop/image_raw/compressed/parameter_updates
-/bebop/image_raw/compressedDepth
-/bebop/image_raw/compressedDepth/parameter_descriptions
-/bebop/image_raw/compressedDepth/parameter_updates
-/bebop/image_raw/theora
-/bebop/image_raw/theora/parameter_descriptions
-/bebop/image_raw/theora/parameter_updates
+
 /bebop/joint_states
 /bebop/land
 /bebop/odom
@@ -56,23 +47,20 @@ import cv2
 import os
 import rospy
 import time
-from datetime import datetime
-from sensor_msgs.msg import CompressedImage, Image
-from ImageRawTools import ImageListener, ParameterListener
-from base import ImageTools
-
-# Criação de uma instância da classe ImageTools
-it = ImageTools()
+from Projects__External_flight.modules.bebop_autonomous.ImageBebop import ImageListener, ParameterListener
+from BebopROS import BebopROS
 
 # Diretório para salvar as imagens
-output_dir = "/home/ubuntu/Documentos/Werikson/GitHub/env_master/Projects__External_flight/modules/bebop_autonomous/images/"  # Altere para o diretório desejado
+DIR_NAME = os.path.dirname(__file__)
+file_path = os.path.join(DIR_NAME, 'images')
 
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
+if not os.path.exists(file_path):
+    os.makedirs(file_path)
 
-def my_imshow(bit):
-    time.sleep(5)
-    
+ba = BebopROS()
+
+def my_imshow(bit: ImageListener):
+    time.sleep(2)
     start_time = time.time()
     while time.time() - start_time < 15:
         if bit.success_image:
@@ -88,24 +76,18 @@ def my_imshow(bit):
 def main():
     rospy.init_node('bebop_image_processor', anonymous=True)
 
-    DIR_NAME = os.path.dirname(__file__)
-
-    # Instanciar o listener de imagens
-    image_listener = ImageListener(DIR_NAME)
-
     # Subscrever aos tópicos de imagens
-    image_listener.subscribe_to_image_raw()
-    image_listener.subscribe_to_image_raw_compressed()
-    my_imshow(image_listener)
-
-    # Instanciar o listener de parâmetros
-    parameter_listener = ParameterListener(image_listener)
+    ba.image_listener.subscribe_to_image_raw()
+    ba.image_listener.subscribe_to_image_raw()
+    ba.image_listener.subscribe_to_image_raw_compressed()
     
     # Subscrever aos tópicos de descrição e atualizações de parâmetros
-    parameter_listener.subscribe_to_parameter_descriptions()
-    parameter_listener.subscribe_to_parameter_updates()
+    ba.parameter_listener.subscribe_to_parameter_descriptions()
+    ba.parameter_listener.subscribe_to_parameter_updates()
 
-    rospy.spin()  # Mantém o nó ativo enquanto as mensagens são processadas
+    my_imshow(ba.image_listener)
+
+    # rospy.spin()  # Mantém o nó ativo enquanto as mensagens são processadas
 
 if __name__ == '__main__':
     try:
