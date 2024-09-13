@@ -54,10 +54,14 @@ rostopic lit
 
 import os
 
-from Projects__External_flight.modules.bebop_autonomous.ImageBebop import ImageListener, ParameterListener
+from DroneCamera import DroneCamera
 
 
 class BebopROS:
     def __init__(self):
-        self.image_listener = ImageListener(os.path.join(os.path.dirname(__file__), 'images'))
-        self.parameter_listener = ParameterListener(self.image_listener)
+        # Diretório para salvar as imagens
+        file_path = os.path.join(os.path.dirname(__file__), 'images')
+
+        if not os.path.exists(file_path): os.makedirs(file_path)
+
+        self.camera = DroneCamera(file_path)
