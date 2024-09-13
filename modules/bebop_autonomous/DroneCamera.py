@@ -1,25 +1,4 @@
 #!/usr/bin/env python
-
-"""
-DroneCamera
-    Purpose: 
-        This class handles camera operations, including capturing raw images, managing camera orientation, and controlling exposure settings.
-
-    Topics:
-        /bebop/image_raw
-        /bebop/image_raw/compressed
-        /bebop/camera_control
-        /bebop/states/ardrone3/CameraState/Orientation
-        /bebop/set_exposure
-        /bebop/snapshot
-
-    Responsibilities:
-        Capture and process images for gesture recognition.
-        Interface with any image compression, depth sensing, or stream encoding.
-        Handle camera orientation and exposure settings.
-"""
-
-
 import rospy
 import cv2
 import os
@@ -28,10 +7,31 @@ from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image, CompressedImage
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Empty, Float32
+from bebop_msgs.msg import Ardrone3CameraStateOrientation  # Import the correct message type for camera orientation
 from dynamic_reconfigure.msg import Config, ConfigDescription
 from typing import Tuple, Optional
 
+
 class DroneCamera:
+    """
+    DroneCamera
+        Purpose: 
+            This class handles camera operations, including capturing raw images, managing camera orientation, and controlling exposure settings.
+
+        Topics:
+            /bebop/image_raw
+            /bebop/image_raw/compressed
+            /bebop/camera_control
+            /bebop/states/ardrone3/CameraState/Orientation
+            /bebop/set_exposure
+            /bebop/snapshot
+
+        Responsibilities:
+            Capture and process images for gesture recognition.
+            Interface with any image compression, depth sensing, or stream encoding.
+            Handle camera orientation and exposure settings.
+    """
+
     def __init__(self, file_path: str):
         """
         Initializes the DroneCamera class, setting up subscribers and camera controls.
@@ -57,11 +57,18 @@ class DroneCamera:
         self.snapshot_pub = rospy.Publisher('/bebop/snapshot', Empty, queue_size=10)
         self.set_exposure_pub = rospy.Publisher('/bebop/set_exposure', Float32, queue_size=10)
 
+        # Initialize camera orientation state variables
+        self.current_tilt: float = 0.0
+        self.current_pan: float = 0.0
+
         # Subscribing to image topics
         rospy.Subscriber("/bebop/image_raw", Image, self._process_raw_image)
         rospy.Subscriber("/bebop/image_raw/compressed", CompressedImage, self._process_compressed_image)
         rospy.Subscriber("/bebop/image_raw/compressedDepth", CompressedImage, self._process_compressed_depth_image)
         rospy.Subscriber("/bebop/image_raw/theora", CompressedImage, self._process_theora_image)
+
+        # Subscribing to camera orientation state
+        rospy.Subscriber("/bebop/states/ardrone3/CameraState/Orientation", Ardrone3CameraStateOrientation, self._process_camera_orientation)
 
         # Initialize parameter listener
         self.param_listener = ParameterListener(self)
@@ -113,6 +120,14 @@ class DroneCamera:
         except Exception as e:
             rospy.logerr(f"Failed to decode Theora image: {e}")
 
+    def _process_camera_orientation(self, data: Ardrone3CameraStateOrientation) -> None:
+        """
+        Processes camera orientation data received from /bebop/states/ardrone3/CameraState/Orientation.
+        """
+        self.current_tilt = data.tilt
+        self.current_pan = data.pan
+        rospy.loginfo(f"Camera Orientation - Tilt: {self.current_tilt}, Pan: {self.current_pan}")
+
     def move_camera(self, tilt=0.0, pan=0.0):
         """
         Controls the camera orientation.
@@ -134,10 +149,17 @@ class DroneCamera:
 
     def set_exposure(self, exposure_value):
         """
-        Sets the camera exposure.
+        Sets the camera's exposure to the specified value.
+
+        :param exposure_value: Exposure value to be set [-3.0, +3.0].
         """
-        self.set_exposure_pub.publish(Empty())  # Adjust this based on actual implementation
-        rospy.loginfo(f"Exposure set to {exposure_value}")
+        try:
+            exposure_msg = Float32()
+            exposure_msg.data = exposure_value
+            self.set_exposure_pub.publish(exposure_msg)
+            rospy.loginfo(f"Exposure set to {exposure_value}")
+        except Exception as e:
+            rospy.logerr(f"Failed to set exposure: {e}")
 
     def _save_image(self, image: np.ndarray, filename: str) -> bool:
         """
@@ -168,7 +190,6 @@ class DroneCamera:
         Starts the camera stream and processes incoming images.
         """
         rospy.spin()  # Keep the node running to receive images
-
 
 
 class ParameterListener:

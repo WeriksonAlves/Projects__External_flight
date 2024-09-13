@@ -2,22 +2,32 @@
 import cv2
 import time
 import os
+from BebopROS import BebopROS
 from DroneCamera import DroneCamera
 import rospy
 
-def my_imshow(bit):
+def my_imshow(camera: DroneCamera):
     time.sleep(2)
-    start_time = time.time()
-    while time.time() - start_time < 5:
-        if bit.success_image:
-            cv2.imshow('/bebop/image_raw ', bit.image)
+    start_time = time.time() - 5
+    while not rospy.is_shutdown() and time.time() - start_time < 100:        
+        if time.time() - start_time < 10:
+            camera.set_exposure(0)
+        elif time.time() - start_time < 20:
+            camera.set_exposure(0.9)
+        elif time.time() - start_time < 30:
+            camera.set_exposure(-0.9)
+        else:
+            camera.set_exposure(0)
+
+        if camera.success_compressed_image:
+            cv2.imshow('/bebop/image_raw/compressed ', camera.image_compressed)
             cv2.waitKey(1)
-        if bit.success_compressed_image:
-            cv2.imshow('/bebop/image_raw/compressed ', bit.image_compressed)
-            cv2.waitKey(1)
-        if not (bit.success_image or bit.success_compressed_image):
+        else:
             print('No image received')
-    cv2.destroyAllWindows()
+        
+        # pressione a tecla q para encerrar o programa
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
 if __name__ == '__main__':
     try:
@@ -28,10 +38,11 @@ if __name__ == '__main__':
         if not os.path.exists(file_path):
             os.makedirs(file_path)
 
-        camera = DroneCamera(file_path)
-        my_imshow(camera)
+        bebop = BebopROS()
+        camera = bebop.camera
 
         rospy.loginfo("Drone camera system initialized")
-        camera.start_camera_stream()
+        my_imshow(camera)
+
     except rospy.ROSInterruptException:
-        pass
+        rospy.logerr("ROS node interrupted.")
