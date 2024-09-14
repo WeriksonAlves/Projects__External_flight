@@ -126,7 +126,6 @@ class DroneCamera:
         """
         self.current_tilt = data.tilt
         self.current_pan = data.pan
-        rospy.loginfo(f"Camera Orientation - Tilt: {self.current_tilt}, Pan: {self.current_pan}")
 
     def move_camera(self, tilt=0.0, pan=0.0):
         """
