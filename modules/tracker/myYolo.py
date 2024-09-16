@@ -81,11 +81,8 @@ class myYolo(TrackerInterface):
         box_x, box_y, box_width, box_height = bounding_box
 
         # Calculate the distance horizontal to the center
-        distance_to_center_h = box_x - frame_center[0]
-        horizontal_direction = '+1' if distance_to_center_h < 0 else '-1'
+        distance_to_center_h = (box_x - frame_center[0])/frame_center[0]
 
         # Calculate the distance vertical to the center
-        
-        distance_to_center_v = box_y - frame_center[1]
-        vertical_direction = '+2' if distance_to_center_v < 0 else '-2'
-        return horizontal_direction, distance_to_center_h, vertical_direction, distance_to_center_v
+        distance_to_center_v = (box_y - frame_center[1])/frame_center[1]
+        return distance_to_center_h, distance_to_center_v
