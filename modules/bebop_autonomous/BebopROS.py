@@ -6,10 +6,18 @@ from .DroneCamera import DroneCamera
 class BebopROS:
     def __init__(self):
         # Diretório para salvar as imagens
-        file_path = os.path.join(os.path.dirname(__file__), 'images')
+        self.file_path = os.path.join(os.path.dirname(__file__), 'images')
+        self.drone_type = 'bebop2'
 
-        if not os.path.exists(file_path): os.makedirs(file_path)
+        if not os.path.exists(self.file_path): os.makedirs(self.file_path)
 
-        self.camera = DroneCamera(file_path)
-        self.camera.initialize_publishers()
-        self.camera.initialize_subscribers(['image', 'compressed'])
+
+    def VideoCapture(self):
+        try:
+            self.camera = DroneCamera(self.file_path)
+            self.camera.initialize_publishers(['camera_control', 'snapshot', 'set_exposure'])
+            self.camera.initialize_subscribers(['image', 'compressed'])
+            self.camera.success_flags["isOpened"] = True
+        except Exception as e:
+            pass
+        return self.camera.success_flags["isOpened"]

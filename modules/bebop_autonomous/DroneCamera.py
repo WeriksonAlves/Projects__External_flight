@@ -47,6 +47,7 @@ class DroneCamera:
             "image_compressed": False,
             "image_compressed_depth": False,
             "image_theora": False,
+            "isOpened": False
         }
 
         self.current_tilt: float = 0.0
@@ -162,6 +163,16 @@ class DroneCamera:
         """Start the camera stream and keep the node active."""
         rospy.spin()
 
+    def read(self):
+        pass
+
+    def isOpened(self) -> bool:
+        """
+        Check if the ROS image topics are publishing or if the camera is active.
+        :return: bool: True if the camera is operational, False otherwise.
+        """
+        
+        return self.success_flags["isOpened"]
 
 class ParameterListener:
     """
