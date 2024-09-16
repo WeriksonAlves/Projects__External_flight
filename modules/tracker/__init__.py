@@ -1,1 +1,1 @@
-from .myYolo import myYolo
+from .MyYolo import MyYolo

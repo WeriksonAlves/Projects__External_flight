@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import os
 
 from .DroneCamera import DroneCamera
@@ -13,3 +11,5 @@ class BebopROS:
         if not os.path.exists(file_path): os.makedirs(file_path)
 
         self.camera = DroneCamera(file_path)
+        self.camera.initialize_publishers()
+        self.camera.initialize_subscribers(['image', 'compressed'])

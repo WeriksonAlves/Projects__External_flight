@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-import numpy as np
 
 
 class TrackerInterface(ABC):
@@ -7,31 +6,30 @@ class TrackerInterface(ABC):
     Abstract base class for tracking processors.
     """
     @abstractmethod
-    def detects_people_in_frame(self, captured_frame: np.ndarray):
+    def detect_people_in_frame(self, *args, **kwargs):
         """
         Abstract method to find people in captured frames.
-
-        :param: captured_frame (np.ndarray): The captured frame.
         """
         pass
     
     @abstractmethod
-    def identifies_operator(self, results_people):
+    def identify_operator(self, *args, **kwargs):
         """
         Abstract method to identify an operator.
-
-        :param: results_people: Results of people found in the frame.
         """
         pass
     
     @abstractmethod
-    def crop_operator_in_frame(self, results_people, results_identifies, captured_frame):
+    def crop_operator_from_frame(self, *args, **kwargs):
         """
         Abstract method to track operators in frames.
+        """
+        pass
 
-        :param: results_people: List of detected people results.
-        :param: results_identifies: Array of identification results.
-        :param: captured_frame: The captured frame.
+    @abstractmethod
+    def centralize_person_in_frame(self, *args, **kwargs):
+        """
+        Abstract method to centralize a person in a frame.
         """
         pass
     
