@@ -64,8 +64,8 @@ class DroneCamera:
         # Subscribing to image topics
         # rospy.Subscriber("/bebop/image_raw", Image, self._process_raw_image)
         rospy.Subscriber("/bebop/image_raw/compressed", CompressedImage, self._process_compressed_image)
-        rospy.Subscriber("/bebop/image_raw/compressedDepth", CompressedImage, self._process_compressed_depth_image)
-        rospy.Subscriber("/bebop/image_raw/theora", CompressedImage, self._process_theora_image)
+        # rospy.Subscriber("/bebop/image_raw/compressedDepth", CompressedImage, self._process_compressed_depth_image)
+        # rospy.Subscriber("/bebop/image_raw/theora", CompressedImage, self._process_theora_image)
 
         # Subscribing to camera orientation state
         rospy.Subscriber("/bebop/states/ardrone3/CameraState/Orientation", Ardrone3CameraStateOrientation, self._process_camera_orientation)
@@ -127,17 +127,17 @@ class DroneCamera:
         self.current_tilt = data.tilt
         self.current_pan = data.pan
 
-    def move_camera(self, tilt=0.0, pan=0.0):
+    def move_camera(self, tilt=0.0, pan=0.0, drone_pitch = 0.0, drone_yaw=0.0):
         """
         Controls the camera orientation.
         :param tilt: The tilt value to set for the camera (vertical movement).
         :param pan: The pan value to set for the camera (horizontal movement).
         """
         camera_control_msg = Twist()
-        camera_control_msg.angular.y = tilt  # Tilt the camera
-        camera_control_msg.angular.z = pan   # Pan the camera
+        camera_control_msg.angular.y = tilt -drone_pitch # Tilt the camera, compensating for drone pitch
+        camera_control_msg.angular.z = pan - drone_yaw   # Pan the camera, compensating for drone yaw
         self.camera_control_pub.publish(camera_control_msg)
-        rospy.loginfo(f"Moving camera - Tilt: {tilt}, Pan: {pan}")
+        rospy.loginfo(f"Moving camera - Tilt: {tilt - drone_pitch}, Pan: {pan - drone_yaw}")
 
     def take_snapshot(self):
         """

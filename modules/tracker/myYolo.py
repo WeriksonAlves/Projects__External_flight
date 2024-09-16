@@ -64,25 +64,24 @@ class myYolo(TrackerInterface):
             break
         return cv2.flip(person_roi, 1), (x, y, w, h)
     
-    def centralize_person_in_frame(self, captured_frame: np.ndarray, bounding_box: Tuple[int, int, int, int]) -> None:
+    def centralize_person_in_frame(self, captured_frame: np.ndarray, bounding_box: Tuple[int, int, int, int], yaw: float) -> Tuple[float, float]:
         """
-        Checks if a person is centered in the captured frame and adjusts the servo position accordingly.
+        Adjusts the camera's orientation to center the person in the frame, compensating for yaw.
 
-        Args:
-            captured_frame (np.ndarray): The captured frame as a numpy array.
-            bounding_box (Tuple[int, int, int, int]): The bounding box coordinates of the detected person (x, y, width, height).
+        :param: captured_frame: The captured frame.
+        :param: bounding_box (Center point x and y, width, height): The bounding box of the person.
+        :param: yaw: The yaw value to compensate for.
+        :return: Tuple[float, float]: The distance to the center horizontally and vertically.
         """
-        
-        # Calculate the center of the frame
+    
         frame_height, frame_width, _ = captured_frame.shape
         frame_center = (frame_width // 2, frame_height // 2)
-        
-        # Obtain the bounding box coordinates
-        box_x, box_y, box_width, box_height = bounding_box
 
-        # Calculate the distance horizontal to the center
-        distance_to_center_h = (box_x - frame_center[0])/frame_center[0]
+        box_x, box_y, _, _ = bounding_box
 
-        # Calculate the distance vertical to the center
-        distance_to_center_v = (box_y - frame_center[1])/frame_center[1]
+        # Calculate distance to the center with yaw compensation
+        distance_to_center_h = (box_x - frame_center[0]) / frame_center[0] - yaw  # Compensate horizontal distance with yaw
+        distance_to_center_v = (box_y - frame_center[1]) / frame_center[1]
+
         return distance_to_center_h, distance_to_center_v
+
