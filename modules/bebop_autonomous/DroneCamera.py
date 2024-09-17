@@ -32,7 +32,6 @@ class DroneCamera:
 
         :param file_path: The path to save images.
         """
-        rospy.init_node('bebop_drone_camera', anonymous=True)
 
         self.file_path = file_path
         self.image_data = {
@@ -163,16 +162,33 @@ class DroneCamera:
         """Start the camera stream and keep the node active."""
         rospy.spin()
 
-    def read(self):
-        pass
+    def read(self) -> Tuple[bool, Optional[np.ndarray]]:
+        """
+        Simulate the behavior of OpenCV's read() method, returning the latest available image.
+
+        :return: (bool, np.ndarray): A tuple where the first element is a boolean indicating if an image was successfully read, 
+                                      and the second element is the image array (if available).
+        """
+        for img_type, img_data in self.image_data.items():
+            if img_data is not None:
+                return True, img_data
+        return False, None
 
     def isOpened(self) -> bool:
         """
         Check if the ROS image topics are publishing or if the camera is active.
         :return: bool: True if the camera is operational, False otherwise.
         """
-        
         return self.success_flags["isOpened"]
+    
+    def release(self) -> None:
+        """
+        Simulate the behavior of OpenCV's release() method, which would release the camera.
+        Here, it resets the internal state indicating the camera is no longer active.
+        """
+        rospy.loginfo("Releasing camera resources")
+        self.success_flags = {key: False for key in self.success_flags}
+        self.image_data = {key: None for key in self.image_data}
 
 class ParameterListener:
     """

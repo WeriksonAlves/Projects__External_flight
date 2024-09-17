@@ -5,7 +5,7 @@ from ..auxiliary.TimeFunctions import TimeFunctions
 
 import numpy as np
 
-class KNN(InterfaceClassifier):
+class KNN(ClassifierInterface):
     def __init__(self, initializer: KNeighborsClassifier):
         self.neigh = initializer
     

@@ -17,24 +17,26 @@ Description
 
 from modules import *
 
+rospy.init_node('RecognitionSystem', anonymous=True)
+
 # Initialize the Gesture Recognition System
 database = {'F': [], 'I': [], 'L': [], 'P': [], 'T': []}
-file_name_build = f"Datasets/DataBase_(5-10)_16.json"
-files_name= ['Datasets/DataBase_(5-10)_G.json',
-            'Datasets/DataBase_(5-10)_H.json',
-            'Datasets/DataBase_(5-10)_L.json',
-            'Datasets/DataBase_(5-10)_M.json',
-            'Datasets/DataBase_(5-10)_T.json',
-            'Datasets/DataBase_(5-10)_1.json',
-            'Datasets/DataBase_(5-10)_2.json',
-            'Datasets/DataBase_(5-10)_3.json',
-            'Datasets/DataBase_(5-10)_4.json',
-            'Datasets/DataBase_(5-10)_5.json',
-            'Datasets/DataBase_(5-10)_6.json',
-            'Datasets/DataBase_(5-10)_7.json',
-            'Datasets/DataBase_(5-10)_8.json',
-            'Datasets/DataBase_(5-10)_9.json',
-            'Datasets/DataBase_(5-10)_10.json'
+file_name_build = f"datasets/DataBase_(5-10)_16.json"
+files_name= ['datasets/DataBase_(5-10)_G.json',
+            'datasets/DataBase_(5-10)_H.json',
+            'datasets/DataBase_(5-10)_L.json',
+            'datasets/DataBase_(5-10)_M.json',
+            'datasets/DataBase_(5-10)_T.json',
+            'datasets/DataBase_(5-10)_1.json',
+            'datasets/DataBase_(5-10)_2.json',
+            'datasets/DataBase_(5-10)_3.json',
+            'datasets/DataBase_(5-10)_4.json',
+            'datasets/DataBase_(5-10)_5.json',
+            'datasets/DataBase_(5-10)_6.json',
+            'datasets/DataBase_(5-10)_7.json',
+            'datasets/DataBase_(5-10)_8.json',
+            'datasets/DataBase_(5-10)_9.json',
+            'datasets/DataBase_(5-10)_10.json'
             ]
 name_val=f"val99"
 
@@ -45,10 +47,9 @@ real_time_mode = ModeFactory.create_mode('real_time', files_name=files_name, dat
 mode = real_time_mode
 
 # Initialize the Servo Position System
-num_servos = 1 # Number of servos in the system
+num_servos = 0 # Number of servos in the system
 if num_servos != 0:
     dir_rot = 1 #direction of rotation
-    rospy.init_node('RecognitionSystem', anonymous=True)
     pub_hor_rot = rospy.Publisher('/EspSystem/hor_rot', Int32, queue_size=10)
     pub_ver_rot = rospy.Publisher('/EspSystem/ver_rot', Int32, queue_size=10)
 else:
@@ -56,11 +57,13 @@ else:
     pub_ver_rot = None
     dir_rot = 0
     
+    
 SPS = ServoPositionSystem(num_servos, pub_hor_rot, pub_ver_rot, dir_rot)
-
+B = BebopROS()
 grs = GestureRecognitionSystem(
-        config=InitializeConfig('http://192.168.209.199:81/stream'),
-        #config=InitializeConfig(4,10),
+        # config=InitializeConfig('http://192.168.209.199:81/stream'),
+        # config=InitializeConfig(4,10),
+        config = InitializeConfig(B,10),
         operation=mode,
         file_handler=FileHandler(),
         current_folder=os.path.dirname(__file__),

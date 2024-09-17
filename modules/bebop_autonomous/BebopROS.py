@@ -16,8 +16,9 @@ class BebopROS:
         try:
             self.camera = DroneCamera(self.file_path)
             self.camera.initialize_publishers(['camera_control', 'snapshot', 'set_exposure'])
-            self.camera.initialize_subscribers(['image', 'compressed'])
+            self.camera.initialize_subscribers(['compressed'])
             self.camera.success_flags["isOpened"] = True
         except Exception as e:
-            pass
+            print(f"Error: {e}")
+            self.camera.success_flags["isOpened"] = False
         return self.camera.success_flags["isOpened"]
