@@ -84,6 +84,8 @@ class GestureRecognitionSystem:
         self.stage = 0
         self.num_gest = 0
         self.dist_virtual_point = 1
+        self.sc_pitch: float = 0
+        self.sc_yaw: float = 0
         self.hands_results = None
         self.pose_results = None
         self.time_gesture = None
@@ -263,6 +265,14 @@ class GestureRecognitionSystem:
             cropped_image, _ = self.tracking_processor.crop_operator_from_frame(boxes, track_ids, results_identifies, frame)
             dist_center_h, dist_center_v = self.tracking_processor.centralize_person_in_frame(frame, boxes[0])
 
+            # Signal control
+            gain = [45, 45]
+            if np.abs(dist_center_v) > 0.25: self.sc_pitch = np.tanh(-dist_center_v*0.75) * gain[0]
+            if np.abs(dist_center_h) > 0.25: self.sc_yaw = np.tanh(dist_center_h*0.75) * gain[1]
+            
+            # print(f"Distance: ({dist_center_h:8.4f}, {dist_center_v:8.4f})   Signal Control: ({sc_pitch:8.4f}, {sc_yaw:8.4f})", end='')
+            self.cap.move_camera(self.sc_pitch, self.sc_yaw)
+            
             # Finds the operator's hand(s) and body
             self.hands_results, self.pose_results = self.feature.find_features(cropped_image)
             frame_results = self.feature.draw_features(cropped_image, self.hands_results, self.pose_results)
