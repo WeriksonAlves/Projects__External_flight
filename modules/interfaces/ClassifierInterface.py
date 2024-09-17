@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-class InterfaceClassifier(ABC):
+class ClassifierInterface(ABC):
     @abstractmethod
     def fit(self, *args, **kwargs):
         pass

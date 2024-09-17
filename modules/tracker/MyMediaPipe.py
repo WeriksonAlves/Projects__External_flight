@@ -1,9 +1,9 @@
-from .interfaces import InterfaceFeature
+from ..interfaces.ExtractorInterface import ExtractorInterface
 import mediapipe as mp
 import cv2
 import numpy as np
 
-class HolisticProcessor(InterfaceFeature):
+class MyMediaPipe(ExtractorInterface):
     """
     MediaPipe processor class for feature extraction.
     """

@@ -1,9 +1,7 @@
-from .interfaces import InterfaceTime
-
 import time
 import functools
 
-class TimeFunctions(InterfaceTime):
+class TimeFunctions:
     def tic(self) -> float:
         """Return the current time."""
         return time.perf_counter()

@@ -1,4 +1,3 @@
-from .interfaces import InterfaceFile
 from .TimeFunctions import TimeFunctions
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
 
@@ -7,7 +6,7 @@ import json
 import os
 import matplotlib.pyplot as plt
 
-class FileHandler(InterfaceFile):
+class FileHandler:
     def initialize_database(self, database: dict) -> tuple[list[str], np.ndarray]:
         """
         Initialize the database and return a list of gesture classes and a NumPy array of true labels.

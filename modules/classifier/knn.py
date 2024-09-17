@@ -1,11 +1,11 @@
 from sklearn.neighbors import KNeighborsClassifier
-from .interfaces import InterfaceClassifier
+from ..interfaces.ClassifierInterface import ClassifierInterface
 from ..auxiliary.TimeFunctions import TimeFunctions
 
 
 import numpy as np
 
-class KNN(InterfaceClassifier):
+class KNN(ClassifierInterface):
     def __init__(self, initializer: KNeighborsClassifier):
         self.neigh = initializer
     

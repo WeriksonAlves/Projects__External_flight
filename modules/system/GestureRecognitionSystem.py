@@ -1,22 +1,29 @@
+import cv2
 import os
+import numpy as np
 import threading
 from typing import Union
-from .SystemSettings import *
+from ..auxiliary.DrawGraphics import DrawGraphics
 from ..auxiliary.FileHandler import FileHandler
 from ..auxiliary.TimeFunctions import TimeFunctions
-from ..classifier.interfaces import InterfaceClassifier
+from ..interfaces.ClassifierInterface import ClassifierInterface
+from ..interfaces.ExtractorInterface import ExtractorInterface
+from ..interfaces.TrackerInterface import TrackerInterface
 from ..gesture.DataProcessor import DataProcessor
-from ..gesture.GestureAnalyzer import GestureAnalyzer
 from ..gesture.FeatureExtractor import FeatureExtractor
-from ..pdi.interfaces import InterfaceTrack, InterfaceFeature
+from ..gesture.GestureAnalyzer import GestureAnalyzer
 from ..system.ServoPositionSystem import ServoPositionSystem
+from ..system.SystemSettings import InitializeConfig
+from ..system.SystemSettings import ModeDataset
+from ..system.SystemSettings import ModeValidate
+from ..system.SystemSettings import ModeRealTime
 
-# This class likely represents a system designed for recognizing gestures.
+
 class GestureRecognitionSystem:
     def __init__(self, config: InitializeConfig, operation: Union[ModeDataset, ModeValidate, ModeRealTime], 
                 file_handler: FileHandler, current_folder: str, data_processor: DataProcessor, 
-                time_functions: TimeFunctions, gesture_analyzer: GestureAnalyzer, tracking_processor: InterfaceTrack, 
-                feature: InterfaceFeature, classifier: InterfaceClassifier = None, sps: ServoPositionSystem = None) -> None:
+                time_functions: TimeFunctions, gesture_analyzer: GestureAnalyzer, tracking_processor: TrackerInterface, 
+                feature: ExtractorInterface, classifier: ClassifierInterface = None, sps: ServoPositionSystem = None) -> None:
         
         self._initialize_camera(config)
         self._initialize_operation(operation)
@@ -251,20 +258,14 @@ class GestureRecognitionSystem:
             bool: True if the processing is successful, False otherwise.
         """
         try:
-            results_people = self.tracking_processor.find_people(frame)
-            results_identifies = self.tracking_processor.identify_operator(results_people)
-
-            # Cut out the bounding box for another image.
-            projected_window, bounding_box = self.tracking_processor.track_operator(results_people, results_identifies, frame)
-
-            # Processes information for servo control
-            self.sps.check_person_centered(frame, bounding_box)
+            results_people, results_identifies = self.tracking_processor.detect_people_in_frame(frame)
+            boxes, track_ids = self.tracking_processor.identify_operator(results_people)
+            cropped_image, _ = self.tracking_processor.crop_operator_from_frame(boxes, track_ids, results_identifies, frame)
+            dist_center_h, dist_center_v = self.tracking_processor.centralize_person_in_frame(frame, boxes[0])
 
             # Finds the operator's hand(s) and body
-            self.hands_results, self.pose_results = self.feature.find_features(projected_window)
-
-            # Draws the operator's hand(s) and body
-            frame_results = self.feature.draw_features(projected_window, self.hands_results, self.pose_results)
+            self.hands_results, self.pose_results = self.feature.find_features(cropped_image)
+            frame_results = self.feature.draw_features(cropped_image, self.hands_results, self.pose_results)
 
             # Shows the skeleton formed on the body, and indicates which gesture is being 
             # performed at the moment.

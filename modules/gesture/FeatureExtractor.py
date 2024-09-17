@@ -33,4 +33,3 @@ class FeatureExtractor:
         """
         joint = pose_data.landmark[joint_index]
         return np.array([joint.x, joint.y, joint.z])
-
