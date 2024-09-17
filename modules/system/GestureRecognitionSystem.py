@@ -271,7 +271,7 @@ class GestureRecognitionSystem:
             if np.abs(dist_center_h) > 0.25: self.sc_yaw = np.tanh(dist_center_h*0.75) * gain[1]
             
             # print(f"Distance: ({dist_center_h:8.4f}, {dist_center_v:8.4f})   Signal Control: ({sc_pitch:8.4f}, {sc_yaw:8.4f})", end='')
-            self.cap.move_camera(self.sc_pitch, self.sc_yaw)
+            # self.cap.move_camera(self.sc_pitch, self.sc_yaw)
             
             # Finds the operator's hand(s) and body
             self.hands_results, self.pose_results = self.feature.find_features(cropped_image)

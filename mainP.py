@@ -17,7 +17,7 @@ Description
 
 from modules import *
 
-rospy.init_node('RecognitionSystem', anonymous=True)
+# rospy.init_node('RecognitionSystem', anonymous=True)
 
 # Initialize the Gesture Recognition System
 database = {'F': [], 'I': [], 'L': [], 'P': [], 'T': []}
@@ -62,8 +62,8 @@ SPS = ServoPositionSystem(num_servos, pub_hor_rot, pub_ver_rot, dir_rot)
 B = BebopROS()
 grs = GestureRecognitionSystem(
         # config=InitializeConfig('http://192.168.209.199:81/stream'),
-        # config=InitializeConfig(4,10),
-        config = InitializeConfig(B,10),
+        config=InitializeConfig(4,10),
+        # config = InitializeConfig(B,10),
         operation=mode,
         file_handler=FileHandler(),
         current_folder=os.path.dirname(__file__),
