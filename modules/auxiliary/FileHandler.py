@@ -95,7 +95,13 @@ class FileHandler(metaclass=SingletonMeta):
             )
 
         self._log_dataset_info(X_train, X_val, time_reg)
-        return np.array(X_train), np.array(Y_train), np.array(X_val), np.array(Y_val)
+
+        X_train = np.array(X_train)
+        Y_train = np.array(Y_train)
+        X_val = np.array(X_val)
+        Y_val = np.array(Y_val)
+
+        return X_train, Y_train, X_val, Y_val
 
     @staticmethod
     def _load_json(file_path: str) -> dict:
@@ -114,21 +120,24 @@ class FileHandler(metaclass=SingletonMeta):
     ) -> None:
         """
         Helper method to process each sample for training and validation.
-        
+
         :param database: Dictionary containing gesture classes and their data.
         :param proportion: Proportion of data to be used for training.
         :param X_train: List to store training data.
         :param Y_train: List to store training labels.
         :param X_val: List to store validation data.
         :param Y_val: List to store validation labels.
-        :param time_reg: Array to store collection times for each gesture class.
+        :param time_reg: Array to store collection times for each gesture
+        class.
         """
         for g, (_, value) in enumerate(database.items()):
             np.random.shuffle(value)
             split_idx = int(proportion * len(value))
             for i, sample in enumerate(value):
                 if i < split_idx:
-                    X_train.append(np.array(sample['data_reduce_dim']).flatten())
+                    X_train.append(
+                        np.array(sample['data_reduce_dim']).flatten()
+                    )
                     Y_train.append(sample['answer_predict'])
                 else:
                     X_val.append(np.array(sample['data_reduce_dim']).flatten())
