@@ -262,7 +262,7 @@ class GestureRecognitionSystem:
         """
         try:
             results_people, results_identifies = self.tracking_processor.detect_people_in_frame(frame)
-            boxes, track_ids = self.tracking_processor.identify_operator(results_people)
+            boxes, track_ids = self.tracking_processor.extract_boxes_and_ids(results_people)
             cropped_image, _ = self.tracking_processor.crop_operator_from_frame(boxes, track_ids, results_identifies, frame)
             dist_center_h, dist_center_v = self.tracking_processor.centralize_person_in_frame(frame, boxes[0])
 

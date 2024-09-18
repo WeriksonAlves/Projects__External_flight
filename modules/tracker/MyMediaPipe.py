@@ -3,6 +3,7 @@ import mediapipe as mp
 import cv2
 import numpy as np
 
+
 class MyMediaPipe(ExtractorInterface):
     """
     MediaPipe processor class for feature extraction.
