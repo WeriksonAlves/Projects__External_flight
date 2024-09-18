@@ -6,7 +6,7 @@ class ClassifierInterface(ABC):
         pass
 
     @abstractmethod
-    def my_predict(self, *args, **kwargs):
+    def predict(self, *args, **kwargs):
         pass
 
     @abstractmethod

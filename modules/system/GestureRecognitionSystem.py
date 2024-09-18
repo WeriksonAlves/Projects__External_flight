@@ -383,7 +383,7 @@ class GestureRecognitionSystem:
         Note: Exclusive function for Real-Time operating mode
         """
         # Classifies the action performed
-        self.y_predict.append(self.classifier.my_predict(self.sample['data_reduce_dim']))
+        self.y_predict.append(self.classifier.predict(self.sample['data_reduce_dim']))
         self.time_classifier.append(self.time_functions.toc(self.t_classifier))
         print(f"\nThe gesture performed belongs to class {self.y_predict[-1]} and took {self.time_classifier[-1]:.3}ms to be classified.\n")
         
