@@ -152,6 +152,7 @@ class GestureRecognitionSystem:
         t_frame = self.time_functions.tic()
         while self.loop:
             if self.time_functions.toc(t_frame) > (1 / self.fps):
+                print(f"FPS: {int(1/self.time_functions.toc(t_frame))}")
                 t_frame = self.time_functions.tic()
                 
                 if cv2.waitKey(1) & 0xFF == ord("q"):
