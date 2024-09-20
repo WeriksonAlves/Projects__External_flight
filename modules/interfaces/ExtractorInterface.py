@@ -33,14 +33,17 @@ class ExtractorInterface(ABC):
         Abstract method to draw features on a projected window.
         Concrete subclasses must implement this method.
 
-        :param projected_window: The input image (projected window) to draw features on.
+        :param projected_window: The input image (projected window) to draw
+        features on.
         :param args: Positional arguments for feature drawing.
         :param kwargs: Keyword arguments for feature drawing.
         :return: The modified projected window with features drawn.
         """
         pass
 
-    def process_and_draw(self, projected_window: np.ndarray, *args: Any, **kwargs: Any) -> np.ndarray:
+    def process_and_draw(
+        self, projected_window: np.ndarray, *args: Any, **kwargs: Any
+    ) -> np.ndarray:
         """
         Template method that defines the skeleton of the feature extraction
         and drawing process. This method uses the `find_features` and
