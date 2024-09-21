@@ -13,21 +13,73 @@ from ..gesture.DataProcessor import DataProcessor
 from ..gesture.FeatureExtractor import FeatureExtractor
 from ..gesture.GestureAnalyzer import GestureAnalyzer
 from ..system.ServoPositionSystem import ServoPositionSystem
-from ..system.SystemSettings import InitializeConfig
-from ..system.SystemSettings import ModeDataset
-from ..system.SystemSettings import ModeValidate
-from ..system.SystemSettings import ModeRealTime
+from ..system.SystemSettings import (
+    InitializeConfig,
+    ModeDataset,
+    ModeValidate,
+    ModeRealTime
+)
 
 
 class GestureRecognitionSystem:
-    def __init__(self, config: InitializeConfig, operation: Union[ModeDataset, ModeValidate, ModeRealTime], 
-                file_handler: FileHandler, current_folder: str, data_processor: DataProcessor, 
-                time_functions: TimeFunctions, gesture_analyzer: GestureAnalyzer, tracking_processor: TrackerInterface, 
-                feature: ExtractorInterface, classifier: ClassifierInterface = None, sps: ServoPositionSystem = None) -> None:
-        
+    """
+    Gesture recognition system for real-time, validation, and dataset
+    collection modes.
+
+    Attributes:
+        file_handler (FileHandler): Handles file operations.
+        current_folder (str): Directory to store and access gesture data.
+        data_processor (DataProcessor): Processes input data for gesture
+        recognition.
+        time_functions (TimeFunctions): Time-related utilities for FPS and
+        performance tracking.
+        gesture_analyzer (GestureAnalyzer): Analyzes detected gestures.
+        tracking_processor (TrackerInterface): Handles tracking of detected
+        objects and gestures.
+        feature (ExtractorInterface): Extracts gesture-related features from
+        input.
+        classifier (ClassifierInterface): Classifier for recognizing gestures
+        (used in validation and real-time modes).
+        sps (ServoPositionSystem): Controls the servo motor position system
+        (optional).
+    """
+
+    def __init__(
+        self,
+        config: InitializeConfig,
+        operation: Union[ModeDataset, ModeValidate, ModeRealTime],
+        file_handler: FileHandler,
+        current_folder: str,
+        data_processor: DataProcessor,
+        time_functions: TimeFunctions,
+        gesture_analyzer: GestureAnalyzer,
+        tracking_processor: TrackerInterface,
+        feature: ExtractorInterface,
+        classifier: ClassifierInterface = None,
+        sps: ServoPositionSystem = None
+    ) -> None:
+        """
+        Initialize the gesture recognition system based on the configuration,
+        operation mode, and various processors and analyzers.
+
+        :param config: Configuration settings for the camera.
+        :param operation: Operation mode for the system.
+        :param file_handler: Handles file operations.
+        :param current_folder: Directory to store and access gesture data.
+        :param data_processor: Processes input data for gesture recognition.
+        :param time_functions: Time-related utilities for FPS and performance
+        tracking.
+        :param gesture_analyzer: Analyzes detected gestures.
+        :param tracking_processor: Handles tracking of detected objects and
+        gestures.
+        :param feature: Extracts gesture-related features from input.
+        :param classifier: Classifier for recognizing gestures (used in
+        validation and real-time modes).
+        :param sps: Controls the servo motor position system (optional).
+        """
         self._initialize_camera(config)
         self._initialize_operation(operation)
-        
+
         self.file_handler = file_handler
         self.current_folder = current_folder
         self.data_processor = data_processor
@@ -37,55 +89,60 @@ class GestureRecognitionSystem:
         self.feature = feature
         self.classifier = classifier
         self.sps = sps
-        
+
         self._initialize_simulation_variables()
         self._initialize_storage_variables()
         self._initialize_threads()
 
     def _initialize_camera(self, config: InitializeConfig) -> None:
-        """
-        The function `_initialize_camera` initializes camera settings based on the provided
-        configuration.
-        """
+        """Initializes camera settings based on the provided configuration."""
         self.cap = config.cap
         self.fps = config.fps
         self.dist = config.dist
         self.length = config.length
 
-    def _initialize_operation(self, operation: Union[ModeDataset, ModeValidate, ModeRealTime]) -> None:
-        """
-        The function `_initialize_operation` initializes attributes based on the mode specified in the
-        input operation.
-        """
+    def _initialize_operation(
+        self, operation: Union[ModeDataset, ModeValidate, ModeRealTime]
+    ) -> None:
+        """Initializes operation mode and specific parameters for each mode."""
         self.mode = operation.mode
         if self.mode == 'D':
-            self.database = operation.database
-            self.file_name_build = operation.file_name_build
-            self.max_num_gest = operation.max_num_gest
-            self.dist = operation.dist
-            self.length = operation.length
+            self._initialize_dataset_mode(operation)
         elif self.mode == 'V':
-            self.database = operation.database
-            self.proportion = operation.proportion
-            self.files_name = operation.files_name
-            self.file_name_val = operation.file_name_val
+            self._initialize_validation_mode(operation)
         elif self.mode == 'RT':
-            self.database = operation.database
-            self.proportion = operation.proportion
-            self.files_name = operation.files_name
+            self._initialize_real_time_mode(operation)
         else:
             raise ValueError("Invalid mode")
 
+    def _initialize_dataset_mode(self, operation: ModeDataset) -> None:
+        """Initializes dataset collection mode."""
+        self.database = operation.database
+        self.file_name_build = operation.file_name_build
+        self.max_num_gest = operation.max_num_gest
+        self.dist = operation.dist
+        self.length = operation.length
+
+    def _initialize_validation_mode(self, operation: ModeValidate) -> None:
+        """Initializes validation mode."""
+        self.database = operation.database
+        self.proportion = operation.proportion
+        self.files_name = operation.files_name
+        self.file_name_val = operation.file_name_val
+
+    def _initialize_real_time_mode(self, operation: ModeRealTime) -> None:
+        """Initializes real-time gesture recognition mode."""
+        self.database = operation.database
+        self.proportion = operation.proportion
+        self.files_name = operation.files_name
+
     def _initialize_simulation_variables(self) -> None:
-        """
-        The function `_initialize_simulation_variables` initializes various simulation variables to
-        default values.
-        """
+        """Initializes simulation-related variables to default values."""
         self.stage = 0
         self.num_gest = 0
-        self.dist_virtual_point = 1
-        self.sc_pitch: float = 0
-        self.sc_yaw: float = 0
+        self.dist_virtual_point = 1.0
+        self.sc_pitch = 0.0
+        self.sc_yaw = 0.0
         self.hands_results = None
         self.pose_results = None
         self.time_gesture = None
@@ -98,135 +155,112 @@ class GestureRecognitionSystem:
         self.time_classifier = []
 
     def _initialize_storage_variables(self) -> None:
-        """
-        The function `_initialize_storage_variables` initializes storage variables using data processed
-        by `data_processor`.
-        """
-        self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(self.dist, self.length)
+        """Initializes variables for storing hand and pose data."""
+        self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(
+            dist=self.dist, length=self.length
+        )
 
     def _initialize_threads(self) -> None:
-        # For threading
+        """Initializes threads for reading images."""
         self.frame_lock = threading.Lock()
-        
-        # Thread for reading images
-        self.image_thread = threading.Thread(target=self._read_image_thread)
-        self.image_thread.daemon = True
+
+        # Start thread for reading images
+        self.image_thread = threading.Thread(
+            target=self._read_image_thread, daemon=True
+        )
         self.image_thread.start()
 
     def run(self) -> None:
         """
-        Run the gesture recognition system based on the specified mode.
-
-        - If the mode is 'D' (Batch), initialize the database and set the loop flag to True.
-        - If the mode is 'RT' (Real-Time), load and fit the classifier, and set the loop flag to True.
-        - If the mode is 'V' (Validation), validate the classifier and set the loop flag to False.
-        - If the mode is invalid, print a message and set the loop flag to False.
-
-        During the loop:
-        - Measure the time for each frame.
-        - Check for user input to quit the loop (pressing 'q').
-        - If the mode is 'D', break the loop if the maximum number of gestures is reached.
-        - Process each stage of the gesture recognition system.
-
-        After the loop, release the capture and close all OpenCV windows.
-
-        Returns:
-            None
+        Main execution loop for gesture recognition system based on the
+        specified mode. Handles dataset collection, real-time gesture
+        recognition, and validation.
         """
+        self._setup_mode()
+
+        t_frame = self.time_functions.tic()
+        while self.loop:
+            if self.time_functions.toc(t_frame) > (1 / self.fps):
+                print(f"FPS: {int(1/self.time_functions.toc(t_frame))}")
+                t_frame = self.time_functions.tic()
+                self._process_frame(t_frame)
+                t_frame = self.time_functions.tic()
+
+    def _setup_mode(self) -> None:
+        """Set up the system based on the mode of operation."""
         if self.mode == 'D':
             self._initialize_database()
             self.loop = True
         elif self.mode == 'RT':
             self._load_and_fit_classifier()
             self.loop = True
-            self.servo_enabled = True
         elif self.mode == 'V':
             self._validate_classifier()
             self.loop = False
-            self.servo_enabled = False
         else:
-            print(f"Operation mode invalid!")
+            print(f"Invalid operation mode: {self.mode}")
             self.loop = False
-            self.servo_enabled = False
-            
-        t_frame = self.time_functions.tic()
-        while self.loop:
-            if self.time_functions.toc(t_frame) > (1 / self.fps):
-                print(f"FPS: {int(1/self.time_functions.toc(t_frame))}")
-                t_frame = self.time_functions.tic()
-                
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    self.stop()
-                
-                if self.mode == "B":
-                    if self.num_gest == self.max_num_gest:
-                        self.stop()
-                
-                self._process_stage()
+
+    def _process_frame(self, t_frame) -> None:
+        """Process each frame during the system's run loop."""
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            self.stop()
+
+        if self.mode == 'D' and self.num_gest == self.max_num_gest:
+            self.stop()
+
+        self._process_stage()
 
     def _initialize_database(self) -> None:
-        """
-        This method initializes the target names and ground truth labels (y_val) by calling the
-        initialize_database method of the file_handler object.
-        """
-        self.target_names, self.y_val = self.file_handler.initialize_database(self.database)
+        """Initialize the gesture database."""
+        self.target_names, self.y_val = self.file_handler.initialize_database(
+            self.database
+        )
 
     def _load_and_fit_classifier(self) -> None:
-        """
-        This method loads the training data, fits the classifier with the training data, and performs
-        model training.
-        """
-        x_train, y_train, _, _ = self.file_handler.load_database(self.current_folder, self.files_name, self.proportion)
+        """Load training data and fit the classifier."""
+        x_train, y_train, _, _ = self.file_handler.load_database(
+            self.current_folder, self.files_name, self.proportion
+        )
         self.classifier.fit(x_train, y_train)
 
     def _validate_classifier(self) -> None:
-        """
-        This method validates the classifier with validation data and saves the validation results.
-        """
-        x_train, y_train, x_val, self.y_val = self.file_handler.load_database(self.current_folder, self.files_name, self.proportion)
+        """Validate the classifier with the validation dataset."""
+        x_train, y_train, x_val, self.y_val = self.file_handler.load_database(
+            self.current_folder, self.files_name, self.proportion
+        )
         self.classifier.fit(x_train, y_train)
         self.y_predict, self.time_classifier = self.classifier.validate(x_val)
-        self.target_names, _ = self.file_handler.initialize_database(self.database)
-        self.file_handler.save_results(self.y_val, self.y_predict, self.time_classifier, self.target_names, os.path.join(self.current_folder, self.file_name_val))
+        self.target_names, _ = self.file_handler.initialize_database(
+            self.database
+        )
+        self.file_handler.save_results(
+            self.y_val,
+            self.y_predict,
+            self.time_classifier,
+            self.target_names,
+            os.path.join(self.current_folder, self.file_name_val)
+        )
 
-    def _process_stage(self) -> None:
-        """
-        The `_process_stage` function handles different stages and modes of processing in the system.        
-        Returns:
-        - If conditions are met, the function may return `None` or continue execution without returning anything.
-        """
+    def _process_stage(self) -> None:  # Voltar AQUI
+        """Processes each stage in the gesture recognition pipeline."""
         if self.stage in [0, 1] and self.mode in ['D', 'RT']:
             success, frame = self._read_image()
-            if not success:
-                return
-            if not self._image_processing(frame):
-                return
-            self._extract_features()
+            if success:
+                self._image_processing(frame)
+                self._extract_features()
         elif self.stage == 2 and self.mode in ['D', 'RT']:
             self.process_reduction()
-            if self.mode == 'D':
-                self.stage = 3
-            elif self.mode == 'RT':
-                self.stage = 4
+            self.stage = 3 if self.mode == 'D' else 4
         elif self.stage == 3 and self.mode == 'D':
-            if self._update_database():
-                self.loop = False
+            self._update_database()
             self.stage = 0
         elif self.stage == 4 and self.mode == 'RT':
             self._classify_gestures()
             self.stage = 0
 
-    def _read_image_thread(self) -> None:
-        """
-        Reads frames from the video capture device and stores the captured frame in the instance variable `frame_captured`.
-
-        This method runs in a separate thread and continuously reads frames from the video capture device. If the frame size is not 640x480,
-        it resizes the frame to the desired size. The captured frame is stored in the `frame_captured` instance variable, which can be accessed
-        by other methods.
-
-        Returns:
-            None
-        """
+    def _read_image_thread(self) -> None:  # VOLTAR AQUI
+        """Thread for continuously reading images from the camera."""
         while True:
             success, frame = self.cap.read()
             if success:
@@ -237,18 +271,16 @@ class GestureRecognitionSystem:
                     self.frame_captured = frame
 
     def _read_image(self) -> tuple[bool, np.ndarray]:
-            """
-            Reads and returns the captured frame from the video stream.
+        """Reads the next image frame from the captured stream."""
+        with self.frame_lock:
+            return self.frame_captured is not None, self.frame_captured
 
-            Returns:
-                A tuple containing a boolean value indicating whether the frame was successfully read,
-                and the captured frame as a numpy array.
-            """
-            with self.frame_lock:
-                if self.frame_captured is None:
-                    return False, None
-                frame = self.frame_captured.copy()  # Create a copy of the frame for thread-safe processing
-            return True, frame
+    def stop(self) -> None:
+        """Stops the gesture recognition system and releases resources."""
+        self.loop = False
+        if self.cap.isOpened():
+            self.cap.release()
+        cv2.destroyAllWindows()
 
     def _image_processing(self, frame: np.ndarray) -> bool:
         """
@@ -390,12 +422,3 @@ class GestureRecognitionSystem:
         
         # Resets sample data variables to default values
         self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(self.dist, self.length)
-
-    def stop(self) -> None:
-        """
-        Stops the gesture recognition system.
-
-        """
-        self.loop = False
-        self.cap.release()
-        cv2.destroyAllWindows()
