@@ -1,29 +1,27 @@
 #!/usr/bin/env python
-"""
-...............................................................................................
-Description
-    Operation mode:
-        Build:     Creates a new database and saves it in json format
-        Recognize: Load the database, create the classifier and classify the actions
+import os
+import rospy
+from std_msgs.msg import Int32
+from modules import (
+    ModeFactory,
+    InitializeConfig,
+    ServoPositionSystem,
+    BebopROS,
+    GestureRecognitionSystem,
+    FileHandler,
+    DataProcessor,
+    TimeFunctions,
+    GestureAnalyzer,
+    MyYolo,
+    MyMediaPipe,
+    KNN
+)
+from sklearn.neighbors import KNeighborsClassifier
+import mediapipe as mp
 
-    Operation stage:
-        0 - Processes the image and analyzes the operator's hand
-        1 - Processes the image and analyzes the operator's body
-        2 - Reduces the dimensionality of the data
-        3 - Updates and save the database
-        4 - Performs classification from kMeans
-...............................................................................................
-"""
-
-
-from modules import *
-
-# rospy.init_node('RecognitionSystem', anonymous=True)
-
-# Initialize the Gesture Recognition System
-database = {'F': [], 'I': [], 'L': [], 'P': [], 'T': []}
-file_name_build = "datasets/DataBase_(5-10)_16.json"
-files_name = [
+# Constants
+DATABASE_FILE = "datasets/DataBase_(5-10)_16.json"
+DATABASE_FILES = [
     'datasets/DataBase_(5-10)_G.json',
     'datasets/DataBase_(5-10)_H.json',
     'datasets/DataBase_(5-10)_L.json',
@@ -40,32 +38,50 @@ files_name = [
     'datasets/DataBase_(5-10)_9.json',
     'datasets/DataBase_(5-10)_10.json'
 ]
-name_val = "val99"
-
-dataset_mode = ModeFactory.create_mode('dataset', database=database, file_name_build=file_name_build)
-validate_mode = ModeFactory.create_mode('validate', files_name=files_name, database=database, name_val=name_val)
-real_time_mode = ModeFactory.create_mode('real_time', files_name=files_name, database=database)
-
-mode = real_time_mode
-
-# Initialize the Servo Position System
-num_servos = 0  # Number of servos in the system
-if num_servos != 0:
-    dir_rot = 1  # direction of rotation
-    pub_hor_rot = rospy.Publisher('/EspSystem/hor_rot', Int32, queue_size=10)
-    pub_ver_rot = rospy.Publisher('/EspSystem/ver_rot', Int32, queue_size=10)
-else:
-    pub_hor_rot = None
-    pub_ver_rot = None
-    dir_rot = 0
+NAME_VAL = "val99"
 
 
-SPS = ServoPositionSystem(num_servos, pub_hor_rot, pub_ver_rot, dir_rot)
-B = BebopROS()
-grs = GestureRecognitionSystem(
-        # config=InitializeConfig('http://192.168.209.199:81/stream'),
-        config=InitializeConfig(4,10),
-        # config = InitializeConfig(B,10),
+def initialize_modes(database_empty):
+    """Initialize operation modes for gesture recognition."""
+    dataset_mode = ModeFactory.create_mode(
+        mode_type='dataset',
+        database=database_empty,
+        file_name_build=DATABASE_FILE
+    )
+    validate_mode = ModeFactory.create_mode(
+        mode_type='validate',
+        files_name=DATABASE_FILES,
+        database=database_empty,
+        name_val=NAME_VAL
+    )
+    real_time_mode = ModeFactory.create_mode(
+        mode_type='real_time',
+        files_name=DATABASE_FILES,
+        database=database_empty
+    )
+    return dataset_mode, validate_mode, real_time_mode
+
+
+def initialize_servo_system(num_servos):
+    """Initialize the Servo Position System."""
+    if num_servos != 0:
+        dir_rot = 1  # Direction of rotation
+        pub_hor_rot = rospy.Publisher(
+            '/EspSystem/horizontal', Int32, queue_size=10
+        )
+        pub_ver_rot = rospy.Publisher(
+            '/EspSystem/vertical', Int32, queue_size=10
+        )
+    else:
+        pub_hor_rot, pub_ver_rot, dir_rot = None, None, 0
+
+    return ServoPositionSystem(num_servos, pub_hor_rot, pub_ver_rot, dir_rot)
+
+
+def create_gesture_recognition_system(camera, mode, sps):
+    """Create the Gesture Recognition System."""
+    return GestureRecognitionSystem(
+        config=InitializeConfig(camera, 10),
         operation=mode,
         file_handler=FileHandler(),
         current_folder=os.path.dirname(__file__),
@@ -80,7 +96,7 @@ grs = GestureRecognitionSystem(
                 model_complexity=1,
                 min_detection_confidence=0.75,
                 min_tracking_confidence=0.75
-                ),
+            ),
             mp.solutions.pose.Pose(
                 static_image_mode=False,
                 model_complexity=1,
@@ -89,19 +105,46 @@ grs = GestureRecognitionSystem(
                 smooth_segmentation=True,
                 min_detection_confidence=0.75,
                 min_tracking_confidence=0.75
-                )
-            ),
+            )
+        ),
         classifier=KNN(
             KNeighborsClassifier(
                 n_neighbors=mode.k,
                 algorithm='auto',
                 weights='uniform'
-                )
-            ),
-        sps=SPS
+            )
+        ),
+        sps=sps
+    )
+
+
+def main():
+    """Main function to run the Gesture Recognition System."""
+    rospy.init_node('RecognitionSystem', anonymous=True)
+
+    # Initialize Gesture Recognition System
+    database = {'F': [], 'I': [], 'L': [], 'P': [], 'T': []}
+    dataset_mode, validate_mode, real_time_mode = initialize_modes(database)
+
+    # Initialize the Servo Position System
+    num_servos = 0  # Adjust the number of servos if necessary
+    sps = initialize_servo_system(num_servos)
+
+    # Initialize the drone
+    bebop_drone = BebopROS()
+    real_sense = 4
+    espcam = "http://192.168.209.199:81/stream"
+
+    # Create and run the gesture recognition system
+    gesture_system = create_gesture_recognition_system(
+        real_sense, real_time_mode, sps
         )
 
-try:
-    grs.run()
-finally:
-    grs.stop()
+    try:
+        gesture_system.run()
+    finally:
+        gesture_system.stop()
+
+
+if __name__ == "__main__":
+    main()
