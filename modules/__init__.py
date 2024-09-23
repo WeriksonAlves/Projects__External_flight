@@ -12,9 +12,10 @@ from .gesture.FeatureExtractor import FeatureExtractor
 from .gesture.GestureAnalyzer import GestureAnalyzer
 
 from .tracker.MyYolo import  MyYolo
-from .tracker.MyMediaPipe import  MyMediaPipe
+from .tracker.MyMediaPipe import  MyMediaPipe, MyHandMediaPipe, MyPoseMediaPipe
 
 from .system.GestureRecognitionSystem import GestureRecognitionSystem
+from .system.alt_GestureRecognitionSystem import GestureRecognitionSystem2
 from .system.ServoPositionSystem import ServoPositionSystem
 from .system.SystemSettings import InitializeConfig
 from .system.SystemSettings import ModeFactory

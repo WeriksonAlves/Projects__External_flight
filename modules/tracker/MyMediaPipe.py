@@ -1,8 +1,16 @@
-from ..interfaces.ExtractorInterface import ExtractorInterface
-import mediapipe as mp
 import cv2
+import mediapipe as mp
 import numpy as np
-from typing import Tuple
+from ..interfaces.ExtractorInterface import ExtractorInterface
+from mediapipe.python.solution_base import SolutionBase
+from mediapipe.python.solutions.drawing_utils import draw_landmarks
+from mediapipe.python.solutions.hands import Hands, HAND_CONNECTIONS
+from mediapipe.python.solutions.pose import Pose, POSE_CONNECTIONS
+from mediapipe.python.solutions.drawing_styles import (
+    get_default_hand_landmarks_style,
+    get_default_pose_landmarks_style
+)
+from typing import Tuple, NamedTuple
 
 
 def ensure_rgb(func):
@@ -13,6 +21,154 @@ def ensure_rgb(func):
         rgb_window = cv2.cvtColor(projected_window, cv2.COLOR_BGR2RGB)
         return func(self, rgb_window, *args, **kwargs)
     return wrapper
+
+
+class MyHandMediaPipe(ExtractorInterface):
+    """
+    MediaPipe processor class for feature extraction, implementing the
+    ExtractorInterface. It uses MediaPipe's Hands models to detect and
+    extract features.
+    """
+
+    def __init__(
+        self,
+        static_image_mode: bool = False,
+        max_num_hands: int = 1,
+        model_complexity: int = 1,
+        min_detection_confidence: float = 0.75,
+        min_tracking_confidence: float = 0.75
+    ) -> None:
+        """
+        Initialize MediaPipe processor with hand models.
+
+        :param static_image_mode: Whether to treat the input images as static
+        images.
+        :param max_num_hands: Maximum number of hands to detect.
+        :param model_complexity: The complexity of the hand detection model.
+        :param min_detection_confidence: Minimum confidence value for
+        detection.
+        :param min_tracking_confidence: Minimum confidence value for tracking.
+        """
+        self.hands_model = mp.solutions.hands.Hands(
+                static_image_mode=static_image_mode,
+                max_num_hands=max_num_hands,
+                model_complexity=model_complexity,
+                min_detection_confidence=min_detection_confidence,
+                min_tracking_confidence=min_tracking_confidence
+            )
+
+    @ensure_rgb
+    def find_features(
+        self, cropped_image: np.ndarray
+    ) -> mp.solutions.hands.Hands:
+        """
+        Detect hand features in the projected window.
+
+        :param cropped_image: The input image for feature detection,
+        expected to be in RGB format.
+        :return: The hand detection results.
+        """
+        hands_results = self.hands_model.process(cropped_image)
+        print("Aqui")
+        return hands_results
+
+    def draw_features(
+        self,
+        cropped_image: np.ndarray,
+        hands_results: NamedTuple
+    ) -> np.ndarray:
+        """
+        Draw hand landmarks on the projected window.
+
+        :param cropped_image: The image to draw landmarks on.
+        :param hands_results: The hand detection results.
+        :return: The modified projected window with landmarks drawn.
+        """
+        cropped_image.flags.writeable = True
+        if hands_results.multi_hand_landmarks:
+            for hand_landmarks in hands_results.multi_hand_landmarks:
+                draw_landmarks(
+                    image=cropped_image,
+                    landmark_list=hand_landmarks,
+                    connections=HAND_CONNECTIONS,
+                    landmark_drawing_spec=get_default_hand_landmarks_style()
+                )
+
+
+class MyPoseMediaPipe(ExtractorInterface):
+    """
+    MediaPipe processor class for feature extraction, implementing the
+    ExtractorInterface. It uses MediaPipe's Pose model to detect and extract
+    features.
+    """
+
+    def __init__(
+        self,
+        static_image_mode: bool = False,
+        model_complexity: int = 1,
+        smooth_landmarks=True,
+        enable_segmentation=False,
+        smooth_segmentation=True,
+        min_detection_confidence: float = 0.75,
+        min_tracking_confidence: float = 0.75
+    ) -> None:
+        """
+        Initialize MediaPipe processor with pose models.
+
+        :param static_image_mode: Whether to treat the input images as static
+        images.
+        :param model_complexity: The complexity of the pose detection model.
+        :param smooth_landmarks: Whether to smooth landmark coordinates.
+        :param enable_segmentation: Whether to enable segmentation.
+        :param smooth_segmentation: Whether to smooth segmentation masks.
+        :param min_detection_confidence: Minimum confidence value for
+        detection.
+        :param min_tracking_confidence: Minimum confidence value for tracking.
+        """
+        self.pose_model: Pose = mp.solutions.pose.Pose(
+                static_image_mode=static_image_mode,
+                model_complexity=model_complexity,
+                smooth_landmarks=smooth_landmarks,
+                enable_segmentation=enable_segmentation,
+                smooth_segmentation=smooth_segmentation,
+                min_detection_confidence=min_detection_confidence,
+                min_tracking_confidence=min_tracking_confidence
+            )
+
+    @ensure_rgb
+    def find_features(
+        self, cropped_image: np.ndarray
+    ) -> NamedTuple:
+        """
+        Detect pose features in the projected window.
+
+        :param cropped_image: The input image for feature detection,
+        expected to be in RGB format.
+        :return: The pose detection results.
+        """
+        pose_results = self.pose_model.process(cropped_image)
+        return pose_results
+
+    def draw_features(
+        self,
+        cropped_image: np.ndarray,
+        pose_results: NamedTuple
+    ) -> np.ndarray:
+        """
+        Draw pose landmarks on the projected window.
+
+        :param cropped_image: The image to draw landmarks on.
+        :param pose_results: The pose detection results.
+        :return: The modified projected window with landmarks drawn.
+        """
+        cropped_image.flags.writeable = True
+        if pose_results.pose_landmarks:
+            draw_landmarks(
+                image=cropped_image,
+                landmark_list=pose_results.pose_landmarks,
+                connections=POSE_CONNECTIONS,
+                landmark_drawing_spec=get_default_pose_landmarks_style()
+            )
 
 
 class MyMediaPipe(ExtractorInterface):

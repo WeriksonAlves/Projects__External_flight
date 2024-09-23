@@ -1,9 +1,10 @@
-from collections import defaultdict
-from typing import Tuple, List
 import cv2
 import numpy as np
-from ultralytics import YOLO
 from ..interfaces import TrackerInterface
+from collections import defaultdict
+from ultralytics import YOLO
+from ultralytics.engine.results import Results
+from typing import Tuple, List
 
 
 class MyYolo(TrackerInterface):
@@ -13,7 +14,9 @@ class MyYolo(TrackerInterface):
     given frame.
     """
 
-    def __init__(self, yolo_model_path: str) -> None:
+    def __init__(
+        self, yolo_model_path: str
+    ) -> None:
         """
         Initializes the MyYolo class by loading the specified YOLO model.
 
@@ -22,9 +25,9 @@ class MyYolo(TrackerInterface):
         self.yolo_model = YOLO(yolo_model_path)
         self.track_history = defaultdict(list)
 
-    def detect_people_in_frame(
+    def detect_people(
         self, frame: np.ndarray, persist: bool = True, verbose: bool = False
-    ) -> Tuple[List, np.ndarray]:
+    ) -> Tuple[List[Results], np.ndarray]:
         """
         Detects people in the given video frame.
 
@@ -32,36 +35,36 @@ class MyYolo(TrackerInterface):
         :param persist: If True, the tracking data will be saved.
         :param verbose: If True, outputs detailed information about the
         detection process.
-        :return: Tuple containing the detection results and the image with
-        annotations.
+        :return: Tuple containing the detection results and the annotated
+        frame.
         """
-        results = self.yolo_model.track(
+        detection_results = self.yolo_model.track(
             frame, persist=persist, verbose=verbose
         )
-        annotated_frame = results[0].plot()
-        return results, annotated_frame
+        annotated_frame = detection_results[0].plot()
+        return detection_results, annotated_frame
 
-    @staticmethod
-    def extract_boxes_and_ids(
-        detection_results: List
-    ) -> Tuple[np.ndarray, List[int]]:
+    def identify_operator(
+        self, detection_results: List[Results]
+    ) -> Tuple[Tuple[int, int, int, int], List[int]]:
         """
         Extracts bounding boxes and tracking IDs for people detected in the
         frame.
 
-        :param detection_results: List of detection results from YOLO.
-        :return: Tuple containing the bounding boxes (x, y, width, height) and
-        tracking IDs.
+        :param detection_results: List of detection results from the YOLO
+        model.
+        :return: Tuple containing the bounding box of the operator and the
+        list of tracking IDs.
         """
         detection_result = detection_results[0].boxes
         boxes = detection_result.xywh.cpu().numpy()
         track_ids = detection_result.id.cpu().numpy().astype(int).tolist()
         return boxes, track_ids
 
-    def crop_operator_from_frame(
+    def crop_operator(
         self, boxes: np.ndarray, track_ids: List[int],
         annotated_frame: np.ndarray, frame: np.ndarray, track_length: int = 90
-    ) -> Tuple[np.ndarray, Tuple[int, int, int, int]]:
+    ) -> Tuple[np.ndarray]:
         """
         Tracks and highlights the operator in the captured frame, and crops
         the region of interest (ROI) for the operator.
@@ -72,8 +75,7 @@ class MyYolo(TrackerInterface):
         :param frame: The original frame where the operator is to be cropped.
         :param track_length: The number of points to keep in track history for
         the operator's path.
-        :return: Cropped image of the operator's region and the bounding box
-        of the operator.
+        :return: Cropped operator region of interest.
         """
 
         for box, track_id in zip(boxes, track_ids):
@@ -103,11 +105,11 @@ class MyYolo(TrackerInterface):
             person_roi = frame[
                 max(0, y - h // 2): y + h // 2, max(0, x - w // 2): x + w // 2
             ]
-            return cv2.flip(person_roi, 1), (x, y, w, h)
+            return cv2.flip(person_roi, 1)
 
-        return frame, (0, 0, 0, 0)  # Fallback if no person is detected
+        return frame  # Fallback if no person is detected
 
-    def centralize_person_in_frame(
+    def centralize_operator(
         self, frame: np.ndarray, bounding_box: Tuple[int, int, int, int],
         drone_pitch: float = 0.0, drone_yaw: float = 0.0
     ) -> Tuple[float, float]:
