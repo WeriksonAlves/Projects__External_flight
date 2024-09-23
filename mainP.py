@@ -72,10 +72,11 @@ def initialize_servo_system(num_servos):
         pub_ver_rot = rospy.Publisher(
             '/EspSystem/vertical', Int32, queue_size=10
         )
+        return ServoPositionSystem(
+            num_servos, pub_hor_rot, pub_ver_rot, dir_rot
+        )
     else:
-        pub_hor_rot, pub_ver_rot, dir_rot = None, None, 0
-
-    return ServoPositionSystem(num_servos, pub_hor_rot, pub_ver_rot, dir_rot)
+        return None
 
 
 def create_gesture_recognition_system(camera, mode, sps):
@@ -130,7 +131,7 @@ def main():
     num_servos = 0  # Adjust the number of servos if necessary
     sps = initialize_servo_system(num_servos)
 
-    # Initialize the drone
+    # Initialize the camera to be used
     bebop_drone = BebopROS()
     real_sense = 4
     espcam = "http://192.168.209.199:81/stream"

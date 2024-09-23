@@ -1,3 +1,4 @@
+import cv2
 import time
 import functools
 from typing import Callable, Any
@@ -54,3 +55,22 @@ class TimeFunctions:
             return value
 
         return wrapper_timer
+
+    @staticmethod
+    def timer(func: Callable) -> Callable:
+        """
+        Decorator to measure the execution time of a function.
+
+        :param func: The function to wrap and measure.
+        :return: A wrapped function that will print its execution time.
+        """
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            start = cv2.getTickCount()
+            result = func(*args, **kwargs)
+            end = cv2.getTickCount()
+            print(
+                f"{func.__name__} executed in " +
+                f"{(end - start) / cv2.getTickFrequency():.6f} seconds"
+                )
+            return result
+        return wrapper
