@@ -1,2 +1,3 @@
 from .MyYolo import MyYolo
-from .MyMediaPipe import MyMediaPipe, MyHandsMediaPipe, MyPoseMediaPipe
+from .MyMediaPipe import MyHandsMediaPipe
+from .MyMediaPipe import MyPoseMediaPipe

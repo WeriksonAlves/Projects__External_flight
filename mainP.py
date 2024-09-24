@@ -14,7 +14,6 @@ from modules import (
     TimeFunctions,
     GestureAnalyzer,
     MyYolo,
-    MyMediaPipe,
     MyHandsMediaPipe,
     MyPoseMediaPipe,
     KNN

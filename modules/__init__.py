@@ -12,7 +12,8 @@ from .gesture.FeatureExtractor import FeatureExtractor
 from .gesture.GestureAnalyzer import GestureAnalyzer
 
 from .tracker.MyYolo import  MyYolo
-from .tracker.MyMediaPipe import  MyMediaPipe, MyHandsMediaPipe, MyPoseMediaPipe
+from .tracker.MyMediaPipe import  MyHandsMediaPipe
+from .tracker.MyMediaPipe import  MyPoseMediaPipe
 
 from .system.GestureRecognitionSystem import GestureRecognitionSystem
 from .system.alt_GestureRecognitionSystem import GestureRecognitionSystem2
