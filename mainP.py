@@ -8,12 +8,15 @@ from modules import (
     ServoPositionSystem,
     BebopROS,
     GestureRecognitionSystem,
+    GestureRecognitionSystem2,
     FileHandler,
     DataProcessor,
     TimeFunctions,
     GestureAnalyzer,
     MyYolo,
     MyMediaPipe,
+    MyHandsMediaPipe,
+    MyPoseMediaPipe,
     KNN
 )
 from sklearn.neighbors import KNeighborsClassifier
@@ -81,7 +84,7 @@ def initialize_servo_system(num_servos):
 
 def create_gesture_recognition_system(camera, mode, sps):
     """Create the Gesture Recognition System."""
-    return GestureRecognitionSystem(
+    return GestureRecognitionSystem2(
         config=InitializeConfig(camera, 10),
         operation=mode,
         file_handler=FileHandler(),
@@ -90,14 +93,16 @@ def create_gesture_recognition_system(camera, mode, sps):
         time_functions=TimeFunctions(),
         gesture_analyzer=GestureAnalyzer(),
         tracking_processor=MyYolo('yolov8n-pose.pt'),
-        feature=MyMediaPipe(
+        feature_hand=MyHandsMediaPipe(
             mp.solutions.hands.Hands(
                 static_image_mode=False,
                 max_num_hands=1,
                 model_complexity=1,
                 min_detection_confidence=0.75,
                 min_tracking_confidence=0.75
-            ),
+            )
+        ),
+        feature_pose=MyPoseMediaPipe(
             mp.solutions.pose.Pose(
                 static_image_mode=False,
                 model_complexity=1,
