@@ -18,7 +18,7 @@ from ..system.SystemSettings import (
     ModeValidate,
     ModeRealTime
 )
-from ..tracker.MyMediaPipe import MyHandsMediaPipe
+from ..tracker.MyMediaPipe import MyHandsMediaPipe, MyPoseMediaPipe
 
 
 class GestureRecognitionSystem2:
@@ -55,7 +55,7 @@ class GestureRecognitionSystem2:
         gesture_analyzer: GestureAnalyzer,
         tracking_processor: TrackerInterface,
         feature_hand: MyHandsMediaPipe,
-        feature_pose: ExtractorInterface,
+        feature_pose: MyPoseMediaPipe,
         classifier: ClassifierInterface = None,
         sps: ServoPositionSystem = None
     ) -> None:
@@ -274,7 +274,6 @@ class GestureRecognitionSystem2:
             if success:
                 cropped_image, sc_pitch, sc_yaw = self._tracking_processor(frame)
                 self._extraction_processor(cropped_image)
-                self._extract_features(cropped_image)
         elif self.stage == 2 and self.mode in ['D', 'RT']:
             self.process_reduction()
             self.stage = 3 if self.mode == 'D' else 4
@@ -322,25 +321,25 @@ class GestureRecognitionSystem2:
             print(f"Error during operator detection and tracking extraction: {e}")
             return frame, 0, 0
 
-    @TimeFunctions.timer
-    def _extraction_processor(self, cropped_image: np.ndarray) -> bool:
-        """ Process the input frame for gesture recognition."""
+    # @TimeFunctions.timer
+    def _extraction_processor(self, cropped_image: np.ndarray) -> None:
+        """
+        Extracts hand and pose features, tracking specific joints and
+        triggering gestures based on criteria.
+        """
         try:
-            # Find and draw features (hands, pose)
-            self.hand_results = self.feature_hand.find_features(cropped_image)
-            frame_results = self.feature_hand.draw_features(cropped_image, self.hand_results)
-            self.pose_results = self.feature_pose.find_features(cropped_image)
-            frame_results = self.feature_pose.draw_features(frame_results, self.pose_results)
+            if self.stage == 0:
+                self._track_hand_gesture(cropped_image)
+            elif self.stage == 1:
+                self._track_wrist_movement(cropped_image)
 
-            # Annotate the frame with current gesture stage and distance
-            annotation = f"S{self.stage} D{self.dist_virtual_point:.3f}"
-            if self.mode == 'D':
-                annotation += f" N{self.num_gest+1}: {self.y_val[self.num_gest]}"
-            cv2.putText(
-                frame_results, annotation, (25, 25), cv2.FONT_HERSHEY_SIMPLEX,
-                1, (255, 255, 255), 1, cv2.LINE_AA
-            )
-            cv2.imshow('RealSense Camera', frame_results)
+            # Check if the gesture duration has been exceeded
+            if self.stage == 1 and self.time_functions.toc(self.time_action) > 4:
+                self.stage = 2
+                self.sample['time_gest'] = self.time_functions.toc(
+                    self.time_gesture
+                    )
+                self.t_classifier = self.time_functions.tic()
             return True
         except Exception as e:
             print(
@@ -350,24 +349,6 @@ class GestureRecognitionSystem2:
             self._handle_processing_error(cropped_image)
             return False
 
-    def _annotation_image(self, frame: np.ndarray) -> None:
-        """Annotates the frame with the information more relevant."""
-        # Annotate the frame with current gesture stage and distance
-        annotation = f"S{self.stage} D{self.dist_virtual_point:.3f}"
-        if self.mode == 'D':
-            annotation += f" N{self.num_gest+1}: {self.y_val[self.num_gest]}"
-        cv2.putText(
-            frame,
-            annotation,
-            (25, 25),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (255, 255, 255),
-            1,
-            cv2.LINE_AA
-        )
-        cv2.imshow('RealSense Camera', frame)
-
     def _handle_processing_error(self, frame: np.ndarray) -> None:
         """Handles errors during image processing by flipping the frame and updating history."""
         with self.frame_lock: frame = self.frame_captured
@@ -376,25 +357,6 @@ class GestureRecognitionSystem2:
         # Repeat the last history line if there's an error
         self.hand_history = np.concatenate((self.hand_history, [self.hand_history[-1]]), axis=0)
         self.wrists_history = np.concatenate((self.wrists_history, [self.wrists_history[-1]]), axis=0)
-
-    # @TimeFunctions.timer
-    def _extract_features(self, cropped_image: np.ndarray) -> None:
-        """
-        Extracts hand and pose features, tracking specific joints and
-        triggering gestures based on criteria.
-        """
-        if self.stage == 0:
-            self._track_hand_gesture(cropped_image)
-        elif self.stage == 1:
-            self._track_wrist_movement(cropped_image)
-
-        # Check if the gesture duration has been exceeded
-        if self.stage == 1 and self.time_functions.toc(self.time_action) > 4:
-            self.stage = 2
-            self.sample['time_gest'] = self.time_functions.toc(
-                self.time_gesture
-                )
-            self.t_classifier = self.time_functions.tic()
 
     def _track_hand_gesture(self, cropped_image: np.ndarray) -> None:
         """Tracks the fingertips and checks if the hand gesture is enabled based on proximity criteria."""
@@ -422,6 +384,24 @@ class GestureRecognitionSystem2:
             self.dist_virtual_point = 1
             self.time_gesture = self.time_functions.tic()
             self.time_action = self.time_functions.tic()
+
+    def _annotation_image(self, frame: np.ndarray) -> None:
+        """Annotates the frame with the information more relevant."""
+        # Annotate the frame with current gesture stage and distance
+        annotation = f"S{self.stage} D{self.dist_virtual_point:.3f}"
+        if self.mode == 'D':
+            annotation += f" N{self.num_gest+1}: {self.y_val[self.num_gest]}"
+        cv2.putText(
+            frame,
+            annotation,
+            (25, 25),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA
+        )
+        cv2.imshow('RealSense Camera', frame)
 
     def _check_enabled_trigger(self, storage_trigger: np.ndarray, length: int = 30, dist: float = 0.03) -> tuple[bool, np.ndarray, float]:
         """
@@ -460,27 +440,21 @@ class GestureRecognitionSystem2:
         Tracks wrist movements during the action phase of a gesture.
         """
         try:
-            # Calculate reference pose for wrist tracking
-            track_ref = np.tile(self.gesture_analyzer.calculate_ref_pose(
-                self.pose_results.pose_landmarks,
-                self.sample['joints_tracked_reference'], 3),
-                len(self.sample['joints_tracked'])
-            )
-            track_pose = [
-                FeatureExtractor.calculate_joint_xyz(self.pose_results.pose_landmarks, marker) for marker in self.sample['joints_tracked']
-            ]
-            track_center = np.array(
-                [np.array(track_pose).flatten() - track_ref]
-            )
+            # Find and draw feature pose
+            self.pose_results = self.feature_pose.find_features(cropped_image)
+            frame_results = self.feature_pose.draw_features(cropped_image, self.pose_results)
 
-            self.wrists_history = np.concatenate(
-                (self.wrists_history, track_center), axis=0
-            )
+            # Annotate the frame with current gesture stage and distance
+            self._annotation_image(frame_results)
+
+            # Calculate reference pose for wrist tracking
+            body_ref = self.feature_pose.calculate_reference_pose(self.pose_results, self.sample['joints_tracked_reference'], self.sample['joints_tracked'], 3)
+            body_pose = self.feature_pose.calculate_pose(self.pose_results, self.sample['joints_tracked'])
+            body_center = np.array([body_pose.flatten() - body_ref])
+            self.wrists_history = np.concatenate((self.wrists_history, body_center), axis=0)
         except:
             # If tracking fails, repeat the last wrist history entry
-            self.wrists_history = np.concatenate(
-                (self.wrists_history, [self.wrists_history[-1]]), axis=0
-            )
+            self.wrists_history = np.concatenate((self.wrists_history, [self.wrists_history[-1]]), axis=0)
 
     def process_reduction(self) -> None:
         """
