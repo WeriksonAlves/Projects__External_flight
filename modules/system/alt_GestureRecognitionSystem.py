@@ -96,7 +96,6 @@ class GestureRecognitionSystem2:
         self._initialize_storage_variables()
         self._initialize_threads()
 
-    # @TimeFunctions.timer
     def _initialize_camera(self, config: InitializeConfig) -> None:
         """Initializes camera settings based on the provided configuration."""
         self.cap = config.cap
@@ -104,7 +103,6 @@ class GestureRecognitionSystem2:
         self.dist = config.dist
         self.length = config.length
 
-    # @TimeFunctions.timer
     def _initialize_operation(
         self, operation: Union[ModeDataset, ModeValidate, ModeRealTime]
     ) -> None:
@@ -119,7 +117,6 @@ class GestureRecognitionSystem2:
         else:
             raise ValueError("Invalid mode")
 
-    # @TimeFunctions.timer
     def _initialize_dataset_mode(self, operation: ModeDataset) -> None:
         """Initializes dataset collection mode."""
         self.database = operation.database
@@ -128,7 +125,6 @@ class GestureRecognitionSystem2:
         self.dist = operation.dist
         self.length = operation.length
 
-    # @TimeFunctions.timer
     def _initialize_validation_mode(self, operation: ModeValidate) -> None:
         """Initializes validation mode."""
         self.database = operation.database
@@ -136,14 +132,12 @@ class GestureRecognitionSystem2:
         self.files_name = operation.files_name
         self.file_name_val = operation.file_name_val
 
-    # @TimeFunctions.timer
     def _initialize_real_time_mode(self, operation: ModeRealTime) -> None:
         """Initializes real-time gesture recognition mode."""
         self.database = operation.database
         self.proportion = operation.proportion
         self.files_name = operation.files_name
 
-    # @TimeFunctions.timer
     def _initialize_simulation_variables(self) -> None:
         """Initializes simulation-related variables to default values."""
         self.stage = 0
@@ -162,14 +156,12 @@ class GestureRecognitionSystem2:
         self.y_predict = []
         self.time_classifier = []
 
-    # @TimeFunctions.timer
     def _initialize_storage_variables(self) -> None:
         """Initializes variables for storing hand and pose data."""
         self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(
             dist=self.dist, length=self.length
         )
 
-    # @TimeFunctions.timer
     def _initialize_threads(self) -> None:
         """Initializes threads for reading images."""
         self.frame_lock = threading.Lock()
@@ -180,7 +172,6 @@ class GestureRecognitionSystem2:
         )
         self.image_thread.start()
 
-    # @TimeFunctions.timer
     def run(self) -> None:
         """
         Main execution loop for gesture recognition system based on the
@@ -197,7 +188,6 @@ class GestureRecognitionSystem2:
                 self._process_frame(t_frame)
                 t_frame = self.time_functions.tic()
 
-    # @TimeFunctions.timer
     def stop(self) -> None:
         """Stops the gesture recognition system and releases resources."""
         self.loop = False
@@ -205,7 +195,6 @@ class GestureRecognitionSystem2:
             self.cap.release()
         cv2.destroyAllWindows()
 
-    # @TimeFunctions.timer
     def _setup_mode(self) -> None:
         """Set up the system based on the mode of operation."""
         if self.mode == 'D':
@@ -221,14 +210,12 @@ class GestureRecognitionSystem2:
             print(f"Invalid operation mode: {self.mode}")
             self.loop = False
 
-    # @TimeFunctions.timer
     def _initialize_database(self) -> None:
         """Initialize the gesture database."""
         self.target_names, self.y_val = self.file_handler.initialize_database(
             self.database
         )
 
-    # @TimeFunctions.timer
     def _load_and_fit_classifier(self) -> None:
         """Load training data and fit the classifier."""
         x_train, y_train, _, _ = self.file_handler.load_database(
@@ -236,7 +223,6 @@ class GestureRecognitionSystem2:
         )
         self.classifier.fit(x_train, y_train)
 
-    # @TimeFunctions.timer
     def _validate_classifier(self) -> None:
         """Validate the classifier with the validation dataset."""
         x_train, y_train, x_val, self.y_val = self.file_handler.load_database(
@@ -255,7 +241,6 @@ class GestureRecognitionSystem2:
             os.path.join(self.current_folder, self.file_name_val)
         )
 
-    # @TimeFunctions.timer
     def _process_frame(self, t_frame) -> None:
         """Process each frame during the system's run loop."""
         if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -266,13 +251,13 @@ class GestureRecognitionSystem2:
 
         self._process_stage()
 
-    # @TimeFunctions.timer
+    @TimeFunctions.timer
     def _process_stage(self) -> None:  # Voltar AQUI
         """Processes each stage in the gesture recognition pipeline."""
         if self.stage in [0, 1] and self.mode in ['D', 'RT']:
             success, frame = self._read_image()
             if success:
-                cropped_image, sc_pitch, sc_yaw = self._tracking_processor(frame)
+                cropped_image, sc_y, sc_z = self._tracking_processor(frame)
                 self._extraction_processor(cropped_image)
         elif self.stage == 2 and self.mode in ['D', 'RT']:
             self.process_reduction()
@@ -284,7 +269,6 @@ class GestureRecognitionSystem2:
             self._classify_gestures()
             self.stage = 0
 
-    # @TimeFunctions.timer
     def _read_image_thread(self) -> None:  # VOLTAR AQUI
         """Thread for continuously reading images from the camera."""
         while True:
@@ -296,7 +280,6 @@ class GestureRecognitionSystem2:
                 with self.frame_lock:
                     self.frame_captured = frame
 
-    # @TimeFunctions.timer
     def _read_image(self) -> tuple[bool, np.ndarray]:
         """Reads the next image frame from the captured stream."""
         with self.frame_lock:
@@ -321,7 +304,6 @@ class GestureRecognitionSystem2:
             print(f"Error during operator detection and tracking extraction: {e}")
             return frame, 0, 0
 
-    # @TimeFunctions.timer
     def _extraction_processor(self, cropped_image: np.ndarray) -> None:
         """
         Extracts hand and pose features, tracking specific joints and
@@ -358,6 +340,7 @@ class GestureRecognitionSystem2:
         self.hand_history = np.concatenate((self.hand_history, [self.hand_history[-1]]), axis=0)
         self.wrists_history = np.concatenate((self.wrists_history, [self.wrists_history[-1]]), axis=0)
 
+    @TimeFunctions.timer
     def _track_hand_gesture(self, cropped_image: np.ndarray) -> None:
         """Tracks the fingertips and checks if the hand gesture is enabled based on proximity criteria."""
         try:
@@ -435,6 +418,7 @@ class GestureRecognitionSystem2:
             return True, storage_trigger[-1:], dist_virtual_point
         return False, storage_trigger[-length:], dist_virtual_point
 
+    @TimeFunctions.timer
     def _track_wrist_movement(self, cropped_image: np.ndarray) -> None:
         """
         Tracks wrist movements during the action phase of a gesture.
@@ -472,7 +456,6 @@ class GestureRecognitionSystem2:
             self.wrists_history.T, self.wrists_history
         )
 
-    # @TimeFunctions.timer
     def _update_database(self) -> bool:
         """
         Updates a database with sample data and saves it in JSON format.
@@ -517,7 +500,6 @@ class GestureRecognitionSystem2:
         """
         self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(self.dist, self.length)
 
-    # @TimeFunctions.timer
     def _classify_gestures(self) -> None:
         """
         Classifies gestures based on the current stage and mode, updates
