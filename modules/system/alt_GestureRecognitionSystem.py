@@ -18,6 +18,7 @@ from ..system.SystemSettings import (
     ModeValidate,
     ModeRealTime
 )
+from ..tracker.MyMediaPipe import MyHandsMediaPipe
 
 
 class GestureRecognitionSystem2:
@@ -53,7 +54,7 @@ class GestureRecognitionSystem2:
         time_functions: TimeFunctions,
         gesture_analyzer: GestureAnalyzer,
         tracking_processor: TrackerInterface,
-        feature_hand: ExtractorInterface,
+        feature_hand: MyHandsMediaPipe,
         feature_pose: ExtractorInterface,
         classifier: ClassifierInterface = None,
         sps: ServoPositionSystem = None
@@ -398,33 +399,61 @@ class GestureRecognitionSystem2:
     def _track_hand_gesture(self, cropped_image: np.ndarray) -> None:
         """Tracks the fingertips and checks if the hand gesture is enabled based on proximity criteria."""
         try:
-            # Calculate reference position and hand pose
-            hand_ref = np.tile(self.gesture_analyzer.calculate_ref_pose(
-                self.hand_results.multi_hand_landmarks[0],
-                self.sample['joints_trigger_reference']),
-                len(self.sample['joints_trigger'])
-            )
-            hand_pose = [
-                FeatureExtractor.calculate_joint_xy(self.hand_results.multi_hand_landmarks[0], marker) for marker in self.sample['joints_trigger']
-            ]
-            hand_center = np.array([np.array(hand_pose).flatten() - hand_ref])
+            # Find and draw feature hands
+            self.hand_results = self.feature_hand.find_features(cropped_image)
+            frame_results = self.feature_hand.draw_features(cropped_image, self.hand_results)
 
-            self.hand_history = np.concatenate(
-                (self.hand_history, hand_center), axis=0
-            )
+            # Annotate the frame with current gesture stage and distance
+            self._annotation_image(frame_results)
+
+            # Calculate reference position and hand pose
+            hand_ref = self.feature_hand.calculate_reference_pose(self.hand_results, self.sample['joints_trigger_reference'], self.sample['joints_trigger'])
+            hand_pose = self.feature_hand.calculate_pose(self.hand_results, self.sample['joints_trigger'])
+            hand_center = np.array([hand_pose.flatten() - hand_ref])
+            self.hand_history = np.concatenate((self.hand_history, hand_center), axis=0)
         except:
             # If tracking fails, repeat the last hand history entry
-            self.hand_history = np.concatenate(
-                (self.hand_history, [self.hand_history[-1]]), axis=0
-            )
+            self.hand_history = np.concatenate((self.hand_history, [self.hand_history[-1]]), axis=0)
 
         # Check trigger conditions for gesture activation
-        _, self.hand_history, self.dist_virtual_point = self.gesture_analyzer.check_trigger_enabled(self.hand_history, self.sample['par_trigger_length'], self.sample['par_trigger_dist'])
+        _, self.hand_history, self.dist_virtual_point = self._check_enabled_trigger(self.hand_history, self.sample['par_trigger_length'], self.sample['par_trigger_dist'])
         if self.dist_virtual_point < self.sample['par_trigger_dist']:
             self.stage = 1
             self.dist_virtual_point = 1
             self.time_gesture = self.time_functions.tic()
             self.time_action = self.time_functions.tic()
+
+    def _check_enabled_trigger(self, storage_trigger: np.ndarray, length: int = 30, dist: float = 0.03) -> tuple[bool, np.ndarray, float]:
+        """
+        Checks if a trigger is enabled based on the input array, length, and
+        distance criteria.
+
+        :param storage_trigger: Array containing trigger data points.
+        :param length: Minimum number of elements in the `storage_trigger`
+        array. Defaults to 30.
+        :param dist: Threshold distance value. Defaults to 0.03.
+        :return: Boolean indicating whether the trigger is enabled, a subset
+        of `storage_trigger`, and the calculated distance of the virtual point.
+        """
+        if len(storage_trigger) < length:
+            return False, storage_trigger, 1
+
+        # Use only the last `length` data points
+        storage_trigger = storage_trigger[-length:]
+        dimension = np.shape(storage_trigger)
+        media_coordinates_fingers = np.mean(
+            storage_trigger, axis=0
+        ).reshape(int(dimension[1] / 2), 2)
+        std_fingers_xy = np.std(media_coordinates_fingers, axis=0)
+
+        # Calculate the distance of the virtual point
+        dist_virtual_point = np.sqrt(
+            std_fingers_xy[0] ** 2 + std_fingers_xy[1] ** 2
+        )
+
+        if dist_virtual_point < dist:
+            return True, storage_trigger[-1:], dist_virtual_point
+        return False, storage_trigger[-length:], dist_virtual_point
 
     def _track_wrist_movement(self, cropped_image: np.ndarray) -> None:
         """
