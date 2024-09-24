@@ -18,8 +18,9 @@ def ensure_rgb(func):
     """
     @wraps(func)
     def wrapper(self, cropped_image: np.ndarray, *args, **kwargs):
-        rgb_window = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB)
-        return func(self, rgb_window, *args, **kwargs)
+        if cropped_image.shape[2] == 3:  # Only convert if needed
+            cropped_image = cv2.cvtColor(cropped_image, cv2.COLOR_BGR2RGB)
+        return func(self, cropped_image, *args, **kwargs)
     return wrapper
 
 
@@ -60,21 +61,16 @@ class MyHandsMediaPipe(ExtractorInterface):
     """
     Class for hand feature extraction using MediaPipe's Hands model.
     """
-    def __init__(
-        self, hands_model: Hands
-    ) -> None:
+    def __init__(self, hands_model: Hands) -> None:
         self.hands_model = hands_model
 
     @ensure_rgb
-    def find_features(
-        self, cropped_image: np.ndarray
-    ) -> NamedTuple:
+    def find_features(self, cropped_image: np.ndarray) -> NamedTuple:
         """
-        Detect hand features in the projected window.
+        Detect hand features in the input image.
 
-        :param cropped_image: The input image for feature detection,
-        expected to be in BGR format.
-        :return: The hand detection result.
+        :param cropped_image: Input image in BGR format.
+        :return: Hand detection result.
         """
         return self.hands_model.process(cropped_image)
 
@@ -82,13 +78,12 @@ class MyHandsMediaPipe(ExtractorInterface):
         self, cropped_image: np.ndarray, hands_results: NamedTuple
     ) -> np.ndarray:
         """
-        Draw hand landmarks on the projected window.
+        Draw hand landmarks on the input image.
 
-        :param cropped_image: The image to draw landmarks on.
-        :param hands_results: The hand detection results.
-        :return: The modified projected window with landmarks drawn.
+        :param cropped_image: Image to draw landmarks on.
+        :param hands_results: Hand detection results.
+        :return: Image with landmarks drawn.
         """
-        cropped_image.flags.writeable = True
         if hands_results.multi_hand_landmarks:
             for hand_landmarks in hands_results.multi_hand_landmarks:
                 draw_landmarks(
@@ -106,11 +101,11 @@ class MyHandsMediaPipe(ExtractorInterface):
         """
         Calculate the reference pose based on hand landmarks.
 
-        :param hands_results: The hand detection results.
-        :param ref_joints: Indices of joints for reference pose.
-        :param trigger_joints: Indices of joints for trigger pose.
-        :param dimensions: Number of dimensions to return (2 or 3).
-        :return: The reference pose.
+        :param hands_results: Hand detection results.
+        :param ref_joints: Joints for reference pose.
+        :param trigger_joints: Joints for trigger pose.
+        :param dimensions: Number of dimensions (2 or 3).
+        :return: Reference pose as a numpy array.
         """
         hand_ref = np.tile(
             FeatureExtractor.calculate_ref_pose(
@@ -125,9 +120,9 @@ class MyHandsMediaPipe(ExtractorInterface):
         """
         Calculate the pose based on hand landmarks.
 
-        :param hands_results: The hand detection results.
-        :param trigger_joints: Indices of joints for trigger pose.
-        :return: The calculated pose.
+        :param hands_results: Hand detection results.
+        :param trigger_joints: Joints for trigger pose.
+        :return: Calculated pose as a numpy array.
         """
         return np.array([
             FeatureExtractor.calculate_joint_xy(
@@ -141,21 +136,16 @@ class MyPoseMediaPipe(ExtractorInterface):
     """
     Class for pose feature extraction using MediaPipe's Pose model.
     """
-    def __init__(
-        self, pose_model: Pose
-    ) -> None:
+    def __init__(self, pose_model: Pose) -> None:
         self.pose_model = pose_model
 
     @ensure_rgb
-    def find_features(
-        self, cropped_image: np.ndarray
-    ) -> NamedTuple:
+    def find_features(self, cropped_image: np.ndarray) -> NamedTuple:
         """
         Detect pose features in the input image.
 
-        :param cropped_image: The input image for feature detection, expected
-        to be in BGR format.
-        :return: The pose detection result.
+        :param cropped_image: Input image in BGR format.
+        :return: Pose detection result.
         """
         return self.pose_model.process(cropped_image)
 
@@ -165,11 +155,10 @@ class MyPoseMediaPipe(ExtractorInterface):
         """
         Draw pose landmarks on the input image.
 
-        :param cropped_image: The image to draw landmarks on.
-        :param pose_results: The pose detection results.
-        :return: The modified image with landmarks drawn.
+        :param cropped_image: Image to draw landmarks on.
+        :param pose_results: Pose detection results.
+        :return: Image with landmarks drawn.
         """
-        cropped_image.flags.writeable = True
         if pose_results.pose_landmarks:
             draw_landmarks(
                 image=cropped_image,
@@ -186,11 +175,11 @@ class MyPoseMediaPipe(ExtractorInterface):
         """
         Calculate the reference pose based on pose landmarks.
 
-        :param pose_results: The pose detection results.
-        :param ref_joints: Indices of joints for reference pose.
-        :param tracked_joints: Indices of joints for tracking.
-        :param dimensions: Number of dimensions to return (2 or 3).
-        :return: The reference pose.
+        :param pose_results: Pose detection results.
+        :param ref_joints: Joints for reference pose.
+        :param tracked_joints: Joints for tracking.
+        :param dimensions: Number of dimensions (2 or 3).
+        :return: Reference pose as a numpy array.
         """
         pose_ref = np.tile(
             FeatureExtractor.calculate_ref_pose(
@@ -205,9 +194,9 @@ class MyPoseMediaPipe(ExtractorInterface):
         """
         Calculate the pose based on pose landmarks.
 
-        :param pose_results: The pose detection results.
-        :param tracked_joints: Indices of joints for tracking.
-        :return: The calculated pose.
+        :param pose_results: Pose detection results.
+        :param tracked_joints: Joints for tracking.
+        :return: Calculated pose as a numpy array.
         """
         return np.array([
             FeatureExtractor.calculate_joint_xyz(
@@ -230,16 +219,16 @@ class FeatureExtractor:
         Retrieve joint coordinates (x, y, [z]).
 
         :param pose_data: Pose data containing landmark information.
-        :param joint_index: The index of the joint to retrieve.
+        :param joint_index: Index of the joint to retrieve.
         :param dimensions: Number of dimensions to return (2 or 3).
-        :return: An array containing the joint coordinates.
+        :return: Joint coordinates as a numpy array.
         """
         joint = pose_data.landmark[joint_index]
-        if dimensions == 2:
-            return np.array([joint.x, joint.y])
-        if dimensions == 3:
-            return np.array([joint.x, joint.y, joint.z])
-        raise ValueError("Invalid dimensions: Must be 2 or 3.")
+        return np.array(
+            [
+                joint.x, joint.y
+            ] if dimensions == 2 else [joint.x, joint.y, joint.z]
+        )
 
     @staticmethod
     @validate_pose_data
@@ -272,20 +261,19 @@ class FeatureExtractor:
     @staticmethod
     @validate_dimension
     def calculate_ref_pose(
-        data: np.ndarray, joints: List[int], dimension: int = 2
+        data: NamedTuple, joints: List[int], dimension: int = 2
     ) -> np.ndarray:
         """
         Calculate the reference pose from joint coordinates.
 
         :param data: Input pose data.
-        :param joints: Indices of joints to use for calculating the reference
-        pose.
+        :param joints: Joints to use for reference pose.
         :param dimension: Number of dimensions (2 or 3).
-        :return: The reference pose as a numpy array.
+        :return: Reference pose as a numpy array.
         """
-        pose_data = [
-            FeatureExtractor._get_joint_coordinates(
+        return np.mean(
+            [FeatureExtractor._get_joint_coordinates(
                 data, joint, dimension
-            ) for joint in joints
-        ]
-        return np.mean(pose_data, axis=0)
+            ) for joint in joints],
+            axis=0
+        )
