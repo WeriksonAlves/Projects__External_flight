@@ -89,7 +89,7 @@ def create_gesture_recognition_system(camera, mode, sps):
         current_folder=os.path.dirname(__file__),
         data_processor=DataProcessor(),
         time_functions=TimeFunctions(),
-        tracking_processor=MyYolo('yolov8n-pose.pt'),
+        tracking_model=MyYolo('yolov8n-pose.pt'),
         feature_hand=MyHandsMediaPipe(
             mp.solutions.hands.Hands(
                 static_image_mode=False,
