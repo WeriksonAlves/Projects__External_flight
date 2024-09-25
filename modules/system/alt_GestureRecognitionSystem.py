@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 import threading
-from typing import Union
+from typing import Union, Tuple
 from ..auxiliary.FileHandler import FileHandler
 from ..auxiliary.TimeFunctions import TimeFunctions
 from ..interfaces.ClassifierInterface import ClassifierInterface
@@ -16,7 +16,6 @@ from ..system.SystemSettings import (
     ModeValidate,
     ModeRealTime
 )
-from ..extractor.MyMediaPipe import MyHandsMediaPipe, MyPoseMediaPipe
 
 
 class GestureRecognitionSystem2:
@@ -42,7 +41,7 @@ class GestureRecognitionSystem2:
         (optional).
     """
 
-    # @TimeFunctions.timer
+    @TimeFunctions.timer
     def __init__(
         self,
         config: InitializeConfig,
@@ -52,8 +51,8 @@ class GestureRecognitionSystem2:
         data_processor: DataProcessor,
         time_functions: TimeFunctions,
         tracking_processor: TrackerInterface,
-        feature_hand: MyHandsMediaPipe,
-        feature_pose: MyPoseMediaPipe,
+        feature_hand: ExtractorInterface,
+        feature_pose: ExtractorInterface,
         classifier: ClassifierInterface = None,
         sps: ServoPositionSystem = None
     ) -> None:
@@ -93,7 +92,7 @@ class GestureRecognitionSystem2:
         self._initialize_storage_variables()
         self._initialize_threads()
 
-    # @TimeFunctions.timer
+    @TimeFunctions.timer
     def _initialize_camera(self, config: InitializeConfig) -> None:
         """Initializes camera settings based on the provided configuration."""
         self.cap = config.cap
@@ -101,7 +100,7 @@ class GestureRecognitionSystem2:
         self.dist = config.dist
         self.length = config.length
 
-    # @TimeFunctions.timer
+    @TimeFunctions.timer
     def _initialize_operation(
         self, operation: Union[ModeDataset, ModeValidate, ModeRealTime]
     ) -> None:
@@ -115,6 +114,43 @@ class GestureRecognitionSystem2:
             self._initialize_real_time_mode(operation)
         else:
             raise ValueError("Invalid mode")
+
+    @TimeFunctions.timer
+    def _initialize_simulation_variables(self) -> None:
+        """Initializes simulation-related variables to default values."""
+        self.stage = 0
+        self.num_gest = 0
+        self.dist_virtual_point = 1.0
+        self.sc_pitch = 0.0
+        self.sc_yaw = 0.0
+        self.hand_results = None
+        self.pose_results = None
+        self.time_gesture = None
+        self.time_action = None
+        self.y_val = None
+        self.frame_captured = None
+        self.center_person = False
+        self.loop = False
+        self.y_predict = []
+        self.time_classifier = []
+
+    @TimeFunctions.timer
+    def _initialize_storage_variables(self) -> None:
+        """Initializes variables for storing hand and pose data."""
+        self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(
+            dist=self.dist, length=self.length
+        )
+
+    @TimeFunctions.timer
+    def _initialize_threads(self) -> None:
+        """Initializes threads for reading images."""
+        self.frame_lock = threading.Lock()
+
+        # Start thread for reading images
+        self.image_thread = threading.Thread(
+            target=self._read_image_thread, daemon=True
+        )
+        self.image_thread.start()
 
     # @TimeFunctions.timer
     def _initialize_dataset_mode(self, operation: ModeDataset) -> None:
@@ -139,43 +175,6 @@ class GestureRecognitionSystem2:
         self.database = operation.database
         self.proportion = operation.proportion
         self.files_name = operation.files_name
-
-    # @TimeFunctions.timer
-    def _initialize_simulation_variables(self) -> None:
-        """Initializes simulation-related variables to default values."""
-        self.stage = 0
-        self.num_gest = 0
-        self.dist_virtual_point = 1.0
-        self.sc_pitch = 0.0
-        self.sc_yaw = 0.0
-        self.hand_results = None
-        self.pose_results = None
-        self.time_gesture = None
-        self.time_action = None
-        self.y_val = None
-        self.frame_captured = None
-        self.center_person = False
-        self.loop = False
-        self.y_predict = []
-        self.time_classifier = []
-
-    # @TimeFunctions.timer
-    def _initialize_storage_variables(self) -> None:
-        """Initializes variables for storing hand and pose data."""
-        self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(
-            dist=self.dist, length=self.length
-        )
-
-    # @TimeFunctions.timer
-    def _initialize_threads(self) -> None:
-        """Initializes threads for reading images."""
-        self.frame_lock = threading.Lock()
-
-        # Start thread for reading images
-        self.image_thread = threading.Thread(
-            target=self._read_image_thread, daemon=True
-        )
-        self.image_thread.start()
 
     # @TimeFunctions.timer
     def run(self) -> None:
@@ -268,7 +267,7 @@ class GestureRecognitionSystem2:
         if self.stage in [0, 1] and self.mode in ['D', 'RT']:
             success, frame = self._read_image()
             if success:
-                cropped_image, sc_y, sc_z = self._tracking_processor(frame)
+                cropped_image = self._tracking_processor(frame)
                 self._extraction_processor(cropped_image)
         elif self.stage == 2 and self.mode in ['D', 'RT']:
             self.process_reduction()
@@ -299,23 +298,33 @@ class GestureRecognitionSystem2:
             return self.frame_captured is not None, self.frame_captured
 
     @TimeFunctions.timer
-    def _tracking_processor(self, frame: np.ndarray, Kv: int = 45, Kh: int = 45) -> tuple[np.ndarray, float, float]:
+    def _tracking_processor(self, frame: np.ndarray
+                            ) -> tuple[np.ndarray, float, float]:
         """Processes the input frame for operator detection and tracking."""
         try:
             results_people, annotated_frame = self.tracker.detect_people(frame)
             boxes, track_ids = self.tracker.identify_operator(results_people)
-            cropped_image = self.tracker.crop_operator(boxes, track_ids, annotated_frame, frame)
-            dist_center_h, dist_center_v = self.tracker.centralize_operator(frame, boxes[0])
-
-            # Adjust camera based on distance to center
-            if np.abs(dist_center_v) > 0.25: sc_pitch = np.tanh(-dist_center_v * 0.75) * Kv
-            else: sc_pitch = 0
-            if np.abs(dist_center_h) > 0.25: sc_yaw = np.tanh(dist_center_h * 0.75) * Kh
-            else: sc_yaw = 0
-            return cropped_image, sc_pitch, sc_yaw
+            cropped_image = self.tracker.crop_operator(boxes, track_ids,
+                                                       annotated_frame, frame)
+            return cropped_image
         except Exception as e:
             print(f"Error during operator detection and tracking extraction: {e}")
-            return frame, 0, 0
+            return frame
+
+    def _ajust_camera(self, frame: np.ndarray, boxes: np.ndarray,
+                      Gi: Tuple[int, int], Ge: Tuple[int, int]
+                      ) -> Tuple[float, float]:
+        dist_center_h, dist_center_v = self.tracker.centralize_operator(frame,
+                                                                        boxes)
+        if np.abs(dist_center_v) > 0.25:
+            sc_pitch = np.tanh(-dist_center_v * Gi[0]) * Ge[0]
+        else:
+            sc_pitch = 0
+        if np.abs(dist_center_h) > 0.25:
+            sc_yaw = np.tanh(dist_center_h * Gi[1]) * Ge[1] 
+        else:
+            sc_yaw = 0
+        return sc_pitch, sc_yaw
 
     @TimeFunctions.timer
     def _extraction_processor(self, cropped_image: np.ndarray) -> None:
