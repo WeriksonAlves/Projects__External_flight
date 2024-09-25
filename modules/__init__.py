@@ -11,8 +11,6 @@ from .extractor.MyMediaPipe import MyHandsMediaPipe
 from .extractor.MyMediaPipe import MyPoseMediaPipe
 
 from .gesture.DataProcessor import DataProcessor
-from .gesture.FeatureExtractor import FeatureExtractor
-from .gesture.GestureAnalyzer import GestureAnalyzer
 
 from .system.GestureRecognitionSystem import GestureRecognitionSystem
 from .system.alt_GestureRecognitionSystem import GestureRecognitionSystem2

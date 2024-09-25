@@ -12,7 +12,6 @@ from modules import (
     FileHandler,
     DataProcessor,
     TimeFunctions,
-    GestureAnalyzer,
     MyYolo,
     MyHandsMediaPipe,
     MyPoseMediaPipe,
@@ -90,7 +89,6 @@ def create_gesture_recognition_system(camera, mode, sps):
         current_folder=os.path.dirname(__file__),
         data_processor=DataProcessor(),
         time_functions=TimeFunctions(),
-        gesture_analyzer=GestureAnalyzer(),
         tracking_processor=MyYolo('yolov8n-pose.pt'),
         feature_hand=MyHandsMediaPipe(
             mp.solutions.hands.Hands(

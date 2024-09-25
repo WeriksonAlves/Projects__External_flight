@@ -9,8 +9,6 @@ from ..interfaces.ClassifierInterface import ClassifierInterface
 from ..interfaces.ExtractorInterface import ExtractorInterface
 from ..interfaces.TrackerInterface import TrackerInterface
 from ..gesture.DataProcessor import DataProcessor
-from ..gesture.FeatureExtractor import FeatureExtractor
-from ..gesture.GestureAnalyzer import GestureAnalyzer
 from ..system.ServoPositionSystem import ServoPositionSystem
 from ..system.SystemSettings import (
     InitializeConfig,
@@ -51,7 +49,6 @@ class GestureRecognitionSystem:
         current_folder: str,
         data_processor: DataProcessor,
         time_functions: TimeFunctions,
-        gesture_analyzer: GestureAnalyzer,
         tracking_processor: TrackerInterface,
         feature_hand: ExtractorInterface,
         feature_pose: ExtractorInterface,

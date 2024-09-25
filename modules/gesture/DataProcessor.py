@@ -1,6 +1,7 @@
 import numpy as np
 from typing import Tuple
 from functools import wraps
+from sklearn.decomposition import PCA
 
 
 def validate_parameters(func):
@@ -91,3 +92,31 @@ class DataProcessor:
         )
 
         return storage_trigger_left, storage_trigger_right, storage_pose_tracked, sample
+
+    @staticmethod
+    def calculate_pca(
+        data: np.ndarray, n_components: int = 3, verbose: bool = False
+    ) -> Tuple[PCA, np.ndarray]:
+        """
+        Performs Principal Component Analysis (PCA) on a dataset.
+
+        :param data: Dataset for PCA analysis.
+        :param n_components: Number of principal components to retain.
+        :param verbose: Whether to print the PCA output. Defaults to False.
+        :return: PCA model object and covariance matrix.
+        """
+        pca_model = PCA(n_components=n_components)
+        pca_model.fit(data)
+
+        covariance_matrix = pca_model.get_covariance()
+
+        if verbose:
+            explained_variance = pca_model.explained_variance_
+            explained_variance_ratio = pca_model.explained_variance_ratio_
+            print(f"Cumulative explained variance: {explained_variance}")
+            print(
+                "Explained variance per principal component: " +
+                f"{explained_variance_ratio}"
+            )
+
+        return pca_model, covariance_matrix
