@@ -13,7 +13,6 @@ from .extractor.MyMediaPipe import MyPoseMediaPipe
 from .gesture.DataProcessor import DataProcessor
 
 from .system.GestureRecognitionSystem import GestureRecognitionSystem
-from .system.alt_GestureRecognitionSystem import GestureRecognitionSystem2
 from .system.ServoPositionSystem import ServoPositionSystem
 from .system.SystemSettings import InitializeConfig
 from .system.SystemSettings import ModeFactory

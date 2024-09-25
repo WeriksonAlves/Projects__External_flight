@@ -8,7 +8,6 @@ from modules import (
     ServoPositionSystem,
     BebopROS,
     GestureRecognitionSystem,
-    GestureRecognitionSystem2,
     FileHandler,
     DataProcessor,
     TimeFunctions,
@@ -82,7 +81,7 @@ def initialize_servo_system(num_servos):
 
 def create_gesture_recognition_system(camera, mode, sps):
     """Create the Gesture Recognition System."""
-    return GestureRecognitionSystem2(
+    return GestureRecognitionSystem(
         config=InitializeConfig(camera, 15),
         operation=mode,
         file_handler=FileHandler(),

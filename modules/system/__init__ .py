@@ -1,5 +1,4 @@
 from .GestureRecognitionSystem import GestureRecognitionSystem
-from .alt_GestureRecognitionSystem import GestureRecognitionSystem2
 from .ServoPositionSystem import ServoPositionSystem
 from .SystemSettings import InitializeConfig
 from .SystemSettings import ModeFactory
