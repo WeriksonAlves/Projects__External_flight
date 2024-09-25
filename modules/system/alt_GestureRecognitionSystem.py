@@ -18,7 +18,7 @@ from ..system.SystemSettings import (
     ModeValidate,
     ModeRealTime
 )
-from ..tracker.MyMediaPipe import MyHandsMediaPipe, MyPoseMediaPipe
+from ..extractor.MyMediaPipe import MyHandsMediaPipe, MyPoseMediaPipe
 
 
 class GestureRecognitionSystem2:
