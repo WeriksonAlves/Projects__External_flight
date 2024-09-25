@@ -84,7 +84,7 @@ def initialize_servo_system(num_servos):
 def create_gesture_recognition_system(camera, mode, sps):
     """Create the Gesture Recognition System."""
     return GestureRecognitionSystem2(
-        config=InitializeConfig(camera, 10),
+        config=InitializeConfig(camera, 15),
         operation=mode,
         file_handler=FileHandler(),
         current_folder=os.path.dirname(__file__),

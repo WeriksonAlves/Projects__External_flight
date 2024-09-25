@@ -70,7 +70,8 @@ class TimeFunctions:
             end = cv2.getTickCount()
             print(
                 f"{func.__name__} executed in " +
-                f"{(end - start) / cv2.getTickFrequency():.6f} seconds"
+                f"{(end - start) / cv2.getTickFrequency():.5f} seconds"
+                f" -> {1/((end - start) / cv2.getTickFrequency()):.0f} FPS"
                 )
             return result
         return wrapper
