@@ -143,7 +143,7 @@ class GestureRecognitionSystem:
 
     def __initialize_storage_variables(self) -> None:
         """Initializes storage variables for hand and pose data."""
-        self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(
+        self.hand_history, self.wrists_history, self.sample = DataProcessor.initialize_data(
             dist=self.dist, length=self.length
         )
 
@@ -526,7 +526,7 @@ class GestureRecognitionSystem:
         """
         Resets sample data, including history, for the next gesture.
         """
-        self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(self.dist, self.length)
+        self.hand_history, _, self.wrists_history, self.sample = DataProcessor.initialize_data(self.dist, self.length)
 
     @MyTimer.timing_decorator(use_cv2)
     def _classify_gestures(self) -> None:
