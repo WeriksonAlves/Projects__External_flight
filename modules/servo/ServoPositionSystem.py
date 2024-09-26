@@ -1,6 +1,6 @@
 from typing import Tuple, Union
 import numpy as np
-from ..servo.ServoControl import CommunicationEspCam
+from .ServoControl import CommunicationEspCam
 import rospy
 
 class ServoPositionSystem:

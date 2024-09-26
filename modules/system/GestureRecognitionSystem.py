@@ -4,12 +4,12 @@ import numpy as np
 import threading
 from typing import Union, Tuple
 from ..auxiliary.FileHandler import FileHandler
-from ..auxiliary.TimeFunctions import TimeFunctions
+from ..auxiliary.MyTimer import MyTimer
 from ..interfaces.ClassifierInterface import ClassifierInterface
 from ..interfaces.ExtractorInterface import ExtractorInterface
 from ..interfaces.TrackerInterface import TrackerInterface
-from ..gesture.DataProcessor import DataProcessor
-from ..system.ServoPositionSystem import ServoPositionSystem
+from ..auxiliary.DataProcessor import DataProcessor
+from ..servo.ServoPositionSystem import ServoPositionSystem
 from ..system.SystemSettings import (InitializeConfig, ModeDataset,
                                      ModeValidate, ModeRealTime)
 
@@ -38,6 +38,9 @@ class GestureRecognitionSystem:
         system.
     """
 
+    log_output = True
+    use_cv2 = True
+
     def __init__(
         self,
         config: InitializeConfig,
@@ -45,7 +48,6 @@ class GestureRecognitionSystem:
         file_handler: FileHandler,
         current_folder: str,
         data_processor: DataProcessor,
-        time_functions: TimeFunctions,
         tracking_model: TrackerInterface,
         feature_hand: ExtractorInterface,
         feature_pose: ExtractorInterface,
@@ -59,7 +61,6 @@ class GestureRecognitionSystem:
         self.file_handler = file_handler
         self.current_folder = current_folder
         self.data_processor = data_processor
-        self.time_functions = time_functions
         self.tracker = tracking_model
         self.feature_hand = feature_hand
         self.feature_pose = feature_pose
@@ -77,7 +78,7 @@ class GestureRecognitionSystem:
         """Retrieve frames per second from the camera."""
         return self.cap.get(cv2.CAP_PROP_FPS) if self.cap else None
 
-    @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def __initialize_camera(self, config: InitializeConfig) -> None:
         """Initializes camera settings based on the provided configuration."""
         self.cap = config.cap
@@ -85,7 +86,7 @@ class GestureRecognitionSystem:
         self.dist = config.dist
         self.length = config.length
 
-    @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def __initialize_operation(self, operation: Union[ModeDataset,
                                ModeValidate, ModeRealTime]) -> None:
         """Initializes operation mode and parameters for each mode."""
@@ -120,7 +121,7 @@ class GestureRecognitionSystem:
         self.proportion = operation.proportion
         self.files_name = operation.files_name
 
-    @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def __initialize_variables(self) -> None:
         """Initializes core and storage variables."""
         self.stage = 0
@@ -130,8 +131,6 @@ class GestureRecognitionSystem:
         self.sc_yaw = 0.0
         self.hand_results = None
         self.pose_results = None
-        # self.time_gesture = None
-        # self.time_action = None
         self.y_val = None
         self.frame_captured = None
         self.center_person = False
@@ -148,7 +147,7 @@ class GestureRecognitionSystem:
             dist=self.dist, length=self.length
         )
 
-    @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def __start_image_thread(self) -> None:
         """Starts a thread for reading images."""
         self.frame_lock = threading.Lock()
@@ -175,7 +174,7 @@ class GestureRecognitionSystem:
                 with self.frame_lock:
                     self.frame_captured = frame
 
-    @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def run(self) -> None:
         """
         Main execution loop for the gesture recognition system.
@@ -183,11 +182,11 @@ class GestureRecognitionSystem:
         and recognition in real-time.
         """
         self._setup_mode()
-        t_frame = self.time_functions.tic()
+        t_frame = MyTimer.get_current_time(self.use_cv2)
 
         while self.loop:
-            if self.time_functions.toc(t_frame) > (1 / self.fps):
-                t_frame = self.time_functions.tic()
+            if MyTimer.elapsed_time(t_frame, self.use_cv2) > (1 / self.fps):
+                t_frame = MyTimer.get_current_time(self.use_cv2)
 
                 # Stop the system if 'q' is pressed
                 if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -210,7 +209,7 @@ class GestureRecognitionSystem:
             self.cap.release()
         cv2.destroyAllWindows()
 
-    @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def _setup_mode(self) -> None:
         """
         Set up the system based on the mode of operation:
@@ -270,7 +269,7 @@ class GestureRecognitionSystem:
                                        os.path.join(self.current_folder,
                                                     self.file_name_val))
 
-    @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2=True, log_output=log_output)
     def __process_stage(self) -> None:
         """
         Handles different stages of gesture recognition depending on the
@@ -301,7 +300,7 @@ class GestureRecognitionSystem:
         with self.frame_lock:
             return self.frame_captured is not None, self.frame_captured
 
-    # @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def _tracking_processor(self, frame: np.ndarray) -> np.ndarray:
         """
         Processes the input frame for operator detection and tracking. Returns
@@ -331,7 +330,7 @@ class GestureRecognitionSystem:
             dist_center_h) > 0.25 else 0
         return sc_pitch, sc_yaw
 
-    # @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def _extraction_processor(self, cropped_image: np.ndarray) -> bool:
         """
         Extracts features from the cropped image, such as hand and wrist
@@ -344,12 +343,12 @@ class GestureRecognitionSystem:
                 self.__track_wrist_movement(cropped_image)
 
             # Check if gesture duration has exceeded
-            if self.stage == 1 and self.time_functions.toc(self.time_action
-                                                           ) > 4:
+            if self.stage == 1 and MyTimer.elapsed_time(self.time_action,
+                                                        self.use_cv2) > 4:
                 self.stage = 2
-                self.sample['time_gest'] = self.time_functions.toc(
-                    self.time_gesture)
-                self.t_classifier = self.time_functions.tic()
+                self.sample['time_gest'] = MyTimer.elapsed_time(
+                    self.time_gesture, self.use_cv2)
+                self.t_classifier = MyTimer.get_current_time(self.use_cv2)
             return True
         except Exception as e:
             print(f"Error during feature extraction: {e}")
@@ -412,8 +411,8 @@ class GestureRecognitionSystem:
         if trigger:
             self.stage = 1
             self.dist_virtual_point = 1
-            self.time_gesture = self.time_functions.tic()
-            self.time_action = self.time_functions.tic()
+            self.time_gesture = MyTimer.get_current_time(self.use_cv2)
+            self.time_action = MyTimer.get_current_time(self.use_cv2)
 
     def __annotation_image(self, frame: np.ndarray) -> None:
         """
@@ -472,7 +471,7 @@ class GestureRecognitionSystem:
         except:
             self.__repeat_last_history_entry()
 
-    # @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def _process_reduction_stage(self) -> None:
         """
         Reduces the dimensionality of the `wrists_history` matrix.
@@ -487,7 +486,7 @@ class GestureRecognitionSystem:
         self.sample['data_reduce_dim'] = np.dot(self.wrists_history.T,
                                                 self.wrists_history)
 
-    # @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def _update_database(self) -> bool:
         """
         Updates the database with the current gesture data, saving it in JSON
@@ -529,7 +528,7 @@ class GestureRecognitionSystem:
         """
         self.hand_history, _, self.wrists_history, self.sample = self.data_processor.initialize_data(self.dist, self.length)
 
-    # @TimeFunctions.timer
+    @MyTimer.timing_decorator(use_cv2)
     def _classify_gestures(self) -> None:
         """
         Classifies gestures in real-time mode, updates predictions, and resets
@@ -552,7 +551,8 @@ class GestureRecognitionSystem:
         self.y_predict.append(predicted_class)
 
         # Log the time taken for classification
-        classification_time = self.time_functions.toc(self.t_classifier)
+        classification_time = MyTimer.elapsed_time(self.t_classifier,
+                                                   self.use_cv2)
         self.time_classifier.append(classification_time)
 
         print(

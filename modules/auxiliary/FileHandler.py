@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.metrics import classification_report
-from .TimeFunctions import TimeFunctions
+from .MyTimer import MyTimer
 
 
 class SingletonMeta(type):
@@ -71,7 +71,7 @@ class FileHandler(metaclass=SingletonMeta):
         with open(file_path, 'w') as file:
             json.dump(database, file)
 
-    @TimeFunctions.run_timer
+    @MyTimer.timing_decorator(use_cv2=True, log_output=False)
     def load_database(
         self, current_folder: str, file_names: list[str], proportion: float
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -161,7 +161,7 @@ class FileHandler(metaclass=SingletonMeta):
         print(f"Validation => Samples: {len(X_val)} Classes: {len(X_val)}")
         print(f"Average collection time per class: {avg_times}\n")
 
-    @TimeFunctions.run_timer
+    @MyTimer.timing_decorator(use_cv2=True, log_output=False)
     def save_results(
         self, y_true: list[str], y_predict: list[str],
         time_classifier: list[float], target_names: list[str], file_path: str

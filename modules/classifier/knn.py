@@ -2,7 +2,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from typing import List, Tuple
 import numpy as np
 from ..interfaces.ClassifierInterface import ClassifierInterface
-from ..auxiliary.TimeFunctions import TimeFunctions
+from ..auxiliary.MyTimer import MyTimer
 
 
 class KNN(ClassifierInterface):
@@ -24,7 +24,7 @@ class KNN(ClassifierInterface):
             )
         self.neigh = initializer
 
-    @TimeFunctions.run_timer
+    @MyTimer.timing_decorator(use_cv2=True, log_output=False)
     def fit(self, Xtrain: np.ndarray, Ytrain: np.ndarray) -> None:
         """
         Fit a KNN model using the input training data X_train and
@@ -61,7 +61,7 @@ class KNN(ClassifierInterface):
             return self.neigh.predict(np.array([reduced_data]))[0]
         return 'Z'
 
-    @TimeFunctions.run_timer
+    @MyTimer.timing_decorator(use_cv2=True, log_output=False)
     def validate(self, X_val: np.ndarray) -> Tuple[List[str], List[float]]:
         """
         Validate the KNN model using the input validation data X_val.
