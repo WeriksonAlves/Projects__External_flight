@@ -1,5 +1,3 @@
-from .DataProcessor import DataProcessor
-from .DrawGraphics import DrawGraphics
-from .FileHandler import FileHandler
+from .MyGraphics import MyGraphics
 from .MyDataHandler import MyDataHandler
 from .MyTimer import MyTimer

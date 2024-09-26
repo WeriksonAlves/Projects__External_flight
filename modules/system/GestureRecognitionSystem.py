@@ -259,7 +259,7 @@ class GestureRecognitionSystem:
         # Save results
         self.target_names, _ = MyDataHandler.initialize_database(
             self.database)
-        MyDataHandler.save_results(self.y_val, self.y_predict,
+        MyDataHandler.save_results(self.y_val.tolist(), self.y_predict,
                                  self.time_classifier, self.target_names,
                                  os.path.join(self.current_folder,
                                               self.file_name_val))

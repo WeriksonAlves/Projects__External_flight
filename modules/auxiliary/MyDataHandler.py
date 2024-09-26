@@ -10,6 +10,7 @@ from sklearn.metrics import (
     ConfusionMatrixDisplay,
     classification_report
 )
+from .MyGraphics import MyGraphics
 from .MyTimer import MyTimer
 
 
@@ -95,9 +96,9 @@ class MyDataHandler(metaclass=SingletonMeta):
         return trigger_history, tracked_history, sample
 
     @staticmethod
-    def initialize_database(
-        database: dict, num_gest: int = 10, randomize: bool = False
-    ) -> Tuple[List[str], np.ndarray]:
+    def initialize_database(database: dict, num_gest: int = 10,
+                            randomize: bool = False) -> Tuple[List[str],
+                                                              np.ndarray]:
         """
         Initializes the database and returns gesture classes and true labels.
 
@@ -116,9 +117,9 @@ class MyDataHandler(metaclass=SingletonMeta):
 
     @staticmethod
     @MyTimer.timing_decorator(use_cv2=True, log_output=False)
-    def load_database(
-        current_folder: str, file_names: List[str], proportion: float
-    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def load_database(current_folder: str, file_names: List[str],
+                      proportion: float) -> Tuple[np.ndarray, np.ndarray,
+                                                  np.ndarray, np.ndarray]:
         """
         Load and process gesture data from the given files, splitting it into
         training and validation sets.
@@ -144,10 +145,9 @@ class MyDataHandler(metaclass=SingletonMeta):
 
     @staticmethod
     @MyTimer.timing_decorator(use_cv2=True, log_output=False)
-    def save_results(
-        y_true: List[str], y_predict: List[str], time_classifier: List[float],
-        target_names: List[str], file_path: str
-    ) -> None:
+    def save_results(y_true: List[str], y_predict: List[str],
+                     time_classifier: List[float], target_names: List[str],
+                     file_path: str) -> None:
         """
         Save classification results and generate confusion matrices.
 
@@ -163,11 +163,11 @@ class MyDataHandler(metaclass=SingletonMeta):
             "time_classifier": time_classifier
         }
 
-        with open(file_path, 'w') as file:
+        with open(file_path + ".json", 'w') as file:
             json.dump(results, file)
 
-        MyDataHandler._plot_confusion_matrix(y_true, y_predict, target_names,
-                                             file_path)
+        MyGraphics.plot_confusion_matrix(y_true, y_predict, target_names,
+                                         file_path)
 
         print(classification_report(y_true, y_predict,
                                     target_names=target_names, zero_division=0
@@ -225,10 +225,9 @@ class MyDataHandler(metaclass=SingletonMeta):
             return json.load(file)
 
     @staticmethod
-    def _process_samples(
-        database: dict, proportion: float, X_train: List, Y_train: List,
-        X_val: List, Y_val: List, time_reg: np.ndarray
-    ) -> None:
+    def _process_samples(database: dict, proportion: float, X_train: List,
+                         Y_train: List, X_val: List, Y_val: List,
+                         time_reg: np.ndarray) -> None:
         """
         Helper method to split data into training and validation sets.
         """

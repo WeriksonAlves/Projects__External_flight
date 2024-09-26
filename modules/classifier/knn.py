@@ -73,13 +73,12 @@ class KNN(ClassifierInterface):
         if not isinstance(X_val, np.ndarray):
             raise ValueError("X_val must be a numpy array")
 
-        time_func = TimeFunctions()
         predictions = []
         classification_times = []
 
         for sample in X_val:
-            start_time = time_func.tic()
+            start_time = MyTimer.get_current_time(True)
             predictions.append(self.predict(sample))
-            classification_times.append(time_func.toc(start_time))
+            classification_times.append(MyTimer.elapsed_time(start_time, True))
 
         return predictions, classification_times

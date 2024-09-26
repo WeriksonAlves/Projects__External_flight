@@ -147,7 +147,7 @@ class ModeValidate:
         )
         ma_p = int(10 * self.proportion)
         me_p = int(10 * (1 - self.proportion))
-        return f"Results/C{n_class}_S{s}_p{ma_p}{me_p}_k{self.k}_{name_val}"
+        return f"results/C{n_class}_S{s}_p{ma_p}{me_p}_k{self.k}_{name_val}"
 
 
 class ModeRealTime:

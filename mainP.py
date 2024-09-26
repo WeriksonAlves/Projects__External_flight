@@ -38,25 +38,32 @@ DATABASE_FILES = [
 NAME_VAL = "val99"
 
 
-def initialize_modes(database_empty):
+def initialize_modes(mode: int):
     """Initialize operation modes for gesture recognition."""
-    dataset_mode = ModeFactory.create_mode(
-        mode_type='dataset',
-        database=database_empty,
-        file_name_build=DATABASE_FILE
-    )
-    validate_mode = ModeFactory.create_mode(
-        mode_type='validate',
-        files_name=DATABASE_FILES,
-        database=database_empty,
-        name_val=NAME_VAL
-    )
-    real_time_mode = ModeFactory.create_mode(
-        mode_type='real_time',
-        files_name=DATABASE_FILES,
-        database=database_empty
-    )
-    return dataset_mode, validate_mode, real_time_mode
+    database_empty = {'F': [], 'I': [], 'L': [], 'P': [], 'T': []}
+
+    if mode == 1:
+        operation_mode = ModeFactory.create_mode(
+            mode_type='dataset',
+            database=database_empty,
+            file_name_build=DATABASE_FILE
+        )
+    elif mode == 2:
+        operation_mode = ModeFactory.create_mode(
+            mode_type='validate',
+            files_name=DATABASE_FILES,
+            database=database_empty,
+            name_val=NAME_VAL
+        )
+    elif mode == 3:
+        operation_mode = ModeFactory.create_mode(
+            mode_type='real_time',
+            files_name=DATABASE_FILES,
+            database=database_empty
+        )
+    else:
+        raise ValueError("Invalid mode")
+    return operation_mode
 
 
 def initialize_servo_system(num_servos):
@@ -109,7 +116,7 @@ def create_gesture_recognition_system(camera, mode, sps):
                 algorithm='auto',
                 weights='uniform'
             )
-        ),
+        ) if hasattr(mode, 'k') else None,
         sps=sps
     )
 
@@ -119,8 +126,7 @@ def main():
     rospy.init_node('RecognitionSystem', anonymous=True)
 
     # Initialize Gesture Recognition System
-    database = {'F': [], 'I': [], 'L': [], 'P': [], 'T': []}
-    dataset_mode, validate_mode, real_time_mode = initialize_modes(database)
+    operation_mode = initialize_modes(3)
 
     # Initialize the Servo Position System
     num_servos = 0  # Adjust the number of servos if necessary
@@ -133,7 +139,7 @@ def main():
 
     # Create and run the gesture recognition system
     gesture_system = create_gesture_recognition_system(
-        real_sense, real_time_mode, sps
+        real_sense, operation_mode, sps
         )
 
     try:

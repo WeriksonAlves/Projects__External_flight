@@ -1,5 +1,4 @@
-from .auxiliary.DrawGraphics import DrawGraphics
-from .auxiliary.FileHandler import FileHandler
+from .auxiliary.MyGraphics import MyGraphics
 from .auxiliary.MyDataHandler import MyDataHandler
 
 from .bebop_autonomous.BebopROS import BebopROS
@@ -9,8 +8,6 @@ from .classifier.knn import KNN
 
 from .extractor.MyMediaPipe import MyHandsMediaPipe
 from .extractor.MyMediaPipe import MyPoseMediaPipe
-
-from .auxiliary.DataProcessor import DataProcessor
 
 from .system.GestureRecognitionSystem import GestureRecognitionSystem
 from .servo.ServoPositionSystem import ServoPositionSystem
