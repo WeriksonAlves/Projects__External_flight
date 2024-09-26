@@ -1,5 +1,6 @@
+import numpy as np
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, List, Tuple, Union
 
 
 class TrackerInterface(ABC):
@@ -12,50 +13,49 @@ class TrackerInterface(ABC):
     """
 
     @abstractmethod
-    def detect_people(self, *args: Any, **kwargs: Any) -> Any:
+    def detect_people(self, frame: np.ndarray, *args: Any, **kwargs: Any
+                      ) -> Tuple[List, np.ndarray]:
         """
         Abstract method to detect people in the captured frames.
 
-        Implementations should return a tuple containing detection results and
-        an annotated frame.
+        :param frame: The captured video frame as a numpy array.
+        :param args: Additional arguments.
+        :param kwargs: Additional keyword arguments.
+        :return: Tuple containing the detection results and the annotated
+            frame.
         """
-        raise NotImplementedError(
-            "Subclasses must implement 'detect_people'."
-        )
+        raise NotImplementedError("Subclasses must implement 'detect_people'.")
 
     @abstractmethod
-    def identify_operator(self, *args: Any, **kwargs: Any) -> Any:
+    def identify_operator(self, detection_results: List, *args: Any,
+                          **kwargs: Any) -> Tuple[np.ndarray, List[int]]:
         """
         Abstract method to extract bounding boxes and tracking IDs from
         detection results.
 
-        Implementations should return bounding boxes (x, y, width, height) and
-        tracking IDs.
+        :param detection_results: List of detection results from the tracking
+            processor.
+        :param args: Additional arguments.
+        :param kwargs: Additional keyword arguments.
+        :return: Tuple containing the bounding boxes and the list of tracking
+            IDs.
         """
         raise NotImplementedError(
-            "Subclasses must implement 'identify_operator'."
-        )
+            "Subclasses must implement 'identify_operator'.")
 
     @abstractmethod
-    def crop_operator(self, *args: Any, **kwargs: Any) -> Any:
+    def crop_operator(self, boxes: np.ndarray, track_ids: List[int],
+                      frame: np.ndarray, *args: Any, **kwargs: Any
+                      ) -> Union[bool, np.ndarray]:
         """
         Abstract method to crop the operator (person) from the captured frame.
 
-        Implementations should track operators in frames and crop the region
-        of interest (ROI) for the operator.
+        :param boxes: The bounding boxes of the detected people.
+        :param track_ids: The tracking IDs of the detected people.
+        :param frame: The captured video frame as a numpy array.
+        :param args: Additional arguments.
+        :param kwargs: Additional keyword arguments.
+        :return: Cropped frame containing the operator or False if no operator
+            is detected.
         """
-        raise NotImplementedError(
-            "Subclasses must implement 'crop_operator'."
-        )
-
-    @abstractmethod
-    def centralize_operator(self, *args: Any, **kwargs: Any) -> Any:
-        """
-        Abstract method to adjust the frame so that the person is centered.
-
-        Implementations should adjust camera orientation (e.g., yaw, pitch) to
-        center the detected person in the frame.
-        """
-        raise NotImplementedError(
-            "Subclasses must implement 'centralize_operator'."
-        )
+        raise NotImplementedError("Subclasses must implement 'crop_operator'.")

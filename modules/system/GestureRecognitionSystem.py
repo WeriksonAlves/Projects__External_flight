@@ -310,6 +310,33 @@ class GestureRecognitionSystem:
             print(f"Error during operator detection and tracking: {e}")
             return frame
 
+    def centralize_operator(self, frame: np.ndarray,
+                            bounding_box: Tuple[int, int, int, int],
+                            drone_pitch: float = 0.0, drone_yaw: float = 0.0
+                            ) -> Tuple[float, float]:
+        """
+        Adjusts the camera's orientation to center the detected person in the
+        frame, compensating for yaw and pitch.
+
+        :param frame: The captured frame.
+        :param bounding_box: The bounding box of the person as (x, y, width,
+        height).
+        :param drone_pitch: The pitch value to compensate for.
+        :param drone_yaw: The yaw value to compensate for.
+        :return: Tuple containing the horizontal and vertical distance to the
+        center of the frame.
+        """
+        frame_height, frame_width = frame.shape[:2]
+        frame_center = (frame_width // 2, frame_height // 2)
+
+        box_x, box_y, _, _ = bounding_box
+        dist_to_center_h = (box_x - frame_center[0]
+                            ) / frame_center[0] - drone_yaw
+        dist_to_center_v = (box_y - frame_center[1]
+                            ) / frame_center[1] - drone_pitch
+
+        return dist_to_center_h, dist_to_center_v
+
     def _ajust_camera(self, frame: np.ndarray, boxes: np.ndarray,
                       Gi: tuple[int, int], Ge: tuple[int, int]
                       ) -> Tuple[float, float]:
@@ -317,7 +344,7 @@ class GestureRecognitionSystem:
         Adjusts the camera orientation based on the operator's position in the
         frame. Returns the pitch and yaw adjustments required.
         """
-        dist_center_h, dist_center_v = self.tracker.centralize_operator(frame,
+        dist_center_h, dist_center_v = self.centralize_operator(frame,
                                                                         boxes)
         sc_pitch = np.tanh(-dist_center_v * Gi[0]) * Ge[0] if np.abs(
             dist_center_v) > 0.25 else 0
