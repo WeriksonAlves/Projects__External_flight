@@ -27,19 +27,19 @@ class KNN(ClassifierInterface):
         self.neigh = initializer
 
     @MyTimer.timing_decorator(use_cv2=True, log_output=False)
-    def fit(self, X_train: np.ndarray, y_train: np.ndarray) -> None:
+    def fit(self, x_train: np.ndarray, y_train: np.ndarray) -> None:
         """
         Fit the KNN model using training data.
 
-        :param X_train: Training feature data (numpy array).
+        :param x_train: Training feature data (numpy array).
         :param y_train: Corresponding target labels (numpy array).
         :raises ValueError: If inputs are not numpy arrays.
         """
-        if not isinstance(X_train, np.ndarray) or not isinstance(y_train,
+        if not isinstance(x_train, np.ndarray) or not isinstance(y_train,
                                                                  np.ndarray):
             raise ValueError("Both X_train and y_train must be numpy arrays.")
-        
-        self.neigh.fit(X_train, y_train)
+
+        self.neigh.fit(x_train, y_train)
 
     def predict(self, reduced_data: np.ndarray, prob_min: float = 0.6) -> str:
         """

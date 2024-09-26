@@ -26,10 +26,8 @@ class ExtractorInterface(ABC):
         pass
 
     @abstractmethod
-    def draw_features(
-        self, cropped_image: np.ndarray, results: Any, *args: Any,
-        **kwargs: Any
-    ) -> np.ndarray:
+    def draw_features(self, cropped_image: np.ndarray, results: Any,
+                      *args: Any, **kwargs: Any) -> np.ndarray:
         """
         Abstract method to draw features on a projected window.
         Concrete subclasses must implement this method.
@@ -43,10 +41,9 @@ class ExtractorInterface(ABC):
         pass
 
     @abstractmethod
-    def calculate_reference_pose(
-        results: Any, ref_joints: List[int], joints: List[int],
-        dimensions: int, self, *args: Any, **kwargs: Any
-    ) -> Any:
+    def calculate_reference_pose(self, results: Any, ref_joints: List[int],
+                                 joints: List[int], dimensions: int,
+                                 *args: Any, **kwargs: Any) -> np.ndarray:
         """
         Abstract method to calculate a reference pose based on the features
         found. Concrete subclasses must implement this method.
@@ -62,9 +59,8 @@ class ExtractorInterface(ABC):
         pass
 
     @abstractmethod
-    def calculate_pose(
-        results: Any, joints: List[int], self, *args: Any, **kwargs: Any
-    ) -> Any:
+    def calculate_pose(self, results: Any, joints: List[int], *args: Any,
+                       **kwargs: Any) -> np.ndarray:
         """
         Abstract method to calculate a pose based on the features found.
         Concrete subclasses must implement this method.

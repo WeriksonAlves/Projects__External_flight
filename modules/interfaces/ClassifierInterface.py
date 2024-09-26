@@ -1,5 +1,6 @@
+import numpy as np
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Union
 
 
 class ClassifierInterface(ABC):
@@ -9,21 +10,24 @@ class ClassifierInterface(ABC):
     """
 
     @abstractmethod
-    def fit(self, *args: Any, **kwargs: Any) -> None:
+    def fit(self, x_train: np.ndarray, y_train: np.ndarray, *args: Any,
+            **kwargs: Any) -> Union[None, Any]:
         """
         Train the classifier using the provided training data.
 
+        :param X_train: Training feature data.
+        :param y_train: Corresponding target labels.
         :param args: Positional arguments for fitting the classifier.
         :param kwargs: Keyword arguments for fitting the classifier.
-        :return: None
         """
         pass
 
     @abstractmethod
-    def predict(self, *args: Any, **kwargs: Any) -> Any:
+    def predict(self, data: np.ndarray, *args: Any, **kwargs: Any) -> str:
         """
         Predict the class label(s) for given input data.
 
+        :param data: Input data for prediction.
         :param args: Positional arguments for prediction.
         :param kwargs: Keyword arguments for prediction.
         :return: Predicted class label(s).
@@ -31,10 +35,12 @@ class ClassifierInterface(ABC):
         pass
 
     @abstractmethod
-    def validate(self, *args: Any, **kwargs: Any) -> Any:
+    def validate(self, x_val: np.ndarray, *args: Any, **kwargs: Any
+                 ) -> Any:
         """
         Validate the classifier using the provided validation data.
 
+        :param X_val: Validation feature data.
         :param args: Positional arguments for validation.
         :param kwargs: Keyword arguments for validation.
         :return: Validation results (could vary depending on implementation).

@@ -74,9 +74,8 @@ class MyHandsMediaPipe(ExtractorInterface):
         """
         return self.hands_model.process(cropped_image)
 
-    def draw_features(
-        self, cropped_image: np.ndarray, hands_results: NamedTuple
-    ) -> np.ndarray:
+    def draw_features(self, cropped_image: np.ndarray,
+                      hands_results: NamedTuple) -> np.ndarray:
         """
         Draw hand landmarks on the input image.
 
