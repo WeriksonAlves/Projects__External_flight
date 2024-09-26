@@ -3,12 +3,11 @@ import os
 import numpy as np
 import threading
 from typing import Union, Tuple
-from ..auxiliary.FileHandler import FileHandler
+from ..auxiliary.MyDataHandler import MyDataHandler
 from ..auxiliary.MyTimer import MyTimer
 from ..interfaces.ClassifierInterface import ClassifierInterface
 from ..interfaces.ExtractorInterface import ExtractorInterface
 from ..interfaces.TrackerInterface import TrackerInterface
-from ..auxiliary.DataProcessor import DataProcessor
 from ..servo.ServoPositionSystem import ServoPositionSystem
 from ..system.SystemSettings import (InitializeConfig, ModeDataset,
                                      ModeValidate, ModeRealTime)
@@ -45,9 +44,7 @@ class GestureRecognitionSystem:
         self,
         config: InitializeConfig,
         operation: Union[ModeDataset, ModeValidate, ModeRealTime],
-        file_handler: FileHandler,
         current_folder: str,
-        data_processor: DataProcessor,
         tracking_model: TrackerInterface,
         feature_hand: ExtractorInterface,
         feature_pose: ExtractorInterface,
@@ -58,9 +55,7 @@ class GestureRecognitionSystem:
         Initializes the gesture recognition system based on the configuration,
         operation mode, and various processors.
         """
-        self.file_handler = file_handler
         self.current_folder = current_folder
-        self.data_processor = data_processor
         self.tracker = tracking_model
         self.feature_hand = feature_hand
         self.feature_pose = feature_pose
@@ -143,7 +138,7 @@ class GestureRecognitionSystem:
 
     def __initialize_storage_variables(self) -> None:
         """Initializes storage variables for hand and pose data."""
-        self.hand_history, self.wrists_history, self.sample = DataProcessor.initialize_data(
+        self.hand_history, self.wrists_history, self.sample = MyDataHandler.initialize_data(
             dist=self.dist, length=self.length
         )
 
@@ -237,7 +232,7 @@ class GestureRecognitionSystem:
         Initializes the gesture database, loading target names and validation
         labels from the file handler.
         """
-        self.target_names, self.y_val = self.file_handler.initialize_database(
+        self.target_names, self.y_val = MyDataHandler.initialize_database(
             self.database)
 
     def __load_and_fit_classifier(self) -> None:
@@ -246,7 +241,7 @@ class GestureRecognitionSystem:
         recognition.
         The classifier is trained on data loaded from the file handler.
         """
-        x_train, y_train, _, _ = self.file_handler.load_database(
+        x_train, y_train, _, _ = MyDataHandler.load_database(
             self.current_folder, self.files_name, self.proportion)
         self.classifier.fit(x_train, y_train)
 
@@ -256,18 +251,18 @@ class GestureRecognitionSystem:
         Trains the classifier and then validates it, saving the results using
         the file handler.
         """
-        x_train, y_train, x_val, self.y_val = self.file_handler.load_database(
+        x_train, y_train, x_val, self.y_val = MyDataHandler.load_database(
             self.current_folder, self.files_name, self.proportion)
         self.classifier.fit(x_train, y_train)
         self.y_predict, self.time_classifier = self.classifier.validate(x_val)
 
         # Save results
-        self.target_names, _ = self.file_handler.initialize_database(
+        self.target_names, _ = MyDataHandler.initialize_database(
             self.database)
-        self.file_handler.save_results(self.y_val, self.y_predict,
-                                       self.time_classifier, self.target_names,
-                                       os.path.join(self.current_folder,
-                                                    self.file_name_val))
+        MyDataHandler.save_results(self.y_val, self.y_predict,
+                                 self.time_classifier, self.target_names,
+                                 os.path.join(self.current_folder,
+                                              self.file_name_val))
 
     @MyTimer.timing_decorator(use_cv2=True, log_output=log_output)
     def __process_stage(self) -> None:
@@ -520,13 +515,13 @@ class GestureRecognitionSystem:
         Saves the database in JSON format to the specified file.
         """
         file_path = os.path.join(self.current_folder, self.file_name_build)
-        self.file_handler.save_database(self.sample, self.database, file_path)
+        MyDataHandler.save_database(self.sample, self.database, file_path)
 
     def __reset_sample_data(self) -> None:
         """
         Resets sample data, including history, for the next gesture.
         """
-        self.hand_history, _, self.wrists_history, self.sample = DataProcessor.initialize_data(self.dist, self.length)
+        self.hand_history, self.wrists_history, self.sample = MyDataHandler.initialize_data(self.dist, self.length)
 
     @MyTimer.timing_decorator(use_cv2)
     def _classify_gestures(self) -> None:
