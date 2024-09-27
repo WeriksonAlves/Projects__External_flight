@@ -17,65 +17,103 @@ class GestureRecognitionSystem:
     log_output = True
     use_cv2 = True
 
-    def __init__(self, current_folder: str, config: InitializeConfig,
+    def __init__(self, config: InitializeConfig,
                  operation: Union[ModeDataset, ModeValidate, ModeRealTime],
+                 current_folder: str,
                  tracking_model: TrackerInterface,
                  feature_hand: ExtractorInterface,
                  feature_pose: ExtractorInterface,
                  classifier: ClassifierInterface = None,
                  sps: ServoPositionSystem = None) -> None:
-        """"
+        """
         Gesture recognition system for real-time, validation, and dataset
         collection modes.
 
-        :param current_folder: Directory to store and access gesture data.
         :param config: Configuration settings for the camera.
         :param operation: Operation mode for the system.
+        :param current_folder: Directory to store and access gesture data.
         :param tracking_model: Object tracking model for gesture recognition.
         :param feature_hand: Feature extractor for hand gestures.
         :param feature_pose: Feature extractor for pose gestures.
         :param classifier: Classifier for gesture recognition (optional).
-        :param sps: Servo Position System for controlling the camera
-            (optional).
+        :param sps: Servo Position System for controlling the camera (optional).
         """
-        self.current_folder = current_folder
         self.config = config
         self.operation = operation
+        self.current_folder = current_folder
         self.tracker = tracking_model
         self.feature_hand = feature_hand
         self.feature_pose = feature_pose
         self.classifier = classifier
         self.sps = sps
+        self.mode = None
+        self.loop = False
 
-        self.__initialize_system()
+        self._initialize_system()
 
     @property
-    def fps(self):
+    def fps(self) -> float:
         """Retrieve frames per second from the camera."""
         return self.cap.get(cv2.CAP_PROP_FPS) if self.cap else None
 
-    def __initialize_system(self) -> None:
-        """Initializes the gesture recognition system."""
+    @MyTimer.timing_decorator(use_cv2)
+    def _initialize_system(self) -> None:
+        """Initialize system components."""
         if not self.__initialize_operation() or not self.__initialize_variables() or not self.__start_image_thread():
             exit()
 
     @MyTimer.timing_decorator(use_cv2)
-    def __initialize_operation(self) -> bool:
-        """Initializes operation mode and parameters for each mode."""
-        try:
-            self.mode = self.operation.mode
-            if self.mode == 'D':
-                self.__initialize_dataset_mode(self.operation)
-            elif self.mode == 'V':
-                self.__initialize_validation_mode(self.operation)
-            elif self.mode == 'RT':
-                self.__initialize_real_time_mode(self.operation)
-            else:
-                raise ValueError(f"Invalid mode: {self.mode}")
+    def _initialize_operation(self) -> bool:
+        """Initialize the system based on the operation mode."""
+        self.mode = self.operation.mode
+        init_map = {
+            'D': self._initialize_dataset_mode,
+            'V': self._initialize_validation_mode,
+            'RT': self._initialize_real_time_mode
+        }
+        if self.mode in init_map:
+            init_map[self.mode](self.operation)
             return True
-        except Exception as e:
-            print(f"Error initializing operation mode: {e}")
-            return False
+        raise ValueError(f"Invalid mode: {self.mode}")
+
+    def _initialize_dataset_mode(self, operation: ModeDataset) -> None:
+        """Initializes dataset collection mode."""
+        self.database = operation.database
+        self.file_name_build = operation.file_name_build
+        self.max_num_gest = operation.max_num_gest
+        self.dist = operation.dist
+        self.length = operation.length
+
+    def _initialize_validation_mode(self, operation: ModeValidate) -> None:
+        """Initializes validation mode."""
+        self.database = operation.database
+        self.proportion = operation.proportion
+        self.files_name = operation.files_name
+        self.file_name_val = operation.file_name_val
+
+    def _initialize_real_time_mode(self, operation: ModeRealTime) -> None:
+        """Initializes real-time gesture recognition mode."""
+        self.database = operation.database
+        self.proportion = operation.proportion
+        self.files_name = operation.files_name
+
+
+
+
+
+
+    def __initialize_operation(self) -> bool:
+        """Initialize the system based on the operation mode."""
+        self.mode = self.operation.mode
+        init_map = {
+            'D': self.__initialize_dataset_mode,
+            'V': self.__initialize_validation_mode,
+            'RT': self.__initialize_real_time_mode
+        }
+        if self.mode in init_map:
+            init_map[self.mode](self.operation)
+            return True
+        raise ValueError(f"Invalid mode: {self.mode}")
 
     def __initialize_dataset_mode(self, operation: ModeDataset) -> None:
         """Initializes dataset collection mode."""
@@ -98,33 +136,33 @@ class GestureRecognitionSystem:
         self.proportion = operation.proportion
         self.files_name = operation.files_name
 
-    @MyTimer.timing_decorator(use_cv2)
-    def __initialize_variables(self) -> bool:
+    @MyTimer.timing_decorator(use_cv2=True)
+    def __initialize_variables(self) -> None:
         """Initializes core and storage variables."""
-        try:
-            self.cap = self.config.cap
-            self.dist = self.config.dist
-            self.length = self.config.length
-            self.stage = 0
-            self.num_gest = 0
-            self.dist_virtual_point = 1.0
-            self.sc_pitch = 0.0
-            self.sc_yaw = 0.0
-            self.hand_results = None
-            self.pose_results = None
-            self.y_val = None
-            self.frame_captured = None
-            self.center_person = False
-            self.loop = False
-            self.y_predict = []
-            self.time_classifier = []
+        self.cap = self.config.cap
+        self.dist = self.config.dist
+        self.length = self.config.length
 
-            # Initializing hand and pose storage
-            self.__initialize_storage_variables()
-            return True
-        except Exception as e:
-            print(f"Error initializing variables: {e}")
-            return False
+        self.center_person = False
+        self.loop = False
+
+        self.dist_virtual_point = 1.0
+        self.sc_pitch = 0.0
+        self.sc_yaw = 0.0
+
+        self.frame_captured = None
+        self.hand_results = None
+        self.pose_results = None
+        self.y_val = None
+
+        self.num_gest = 0
+        self.stage = 0
+
+        self.time_classifier = []
+        self.y_predict = []
+
+        # Initializing hand and pose storage
+        self.__initialize_storage_variables()
 
     def __initialize_storage_variables(self) -> None:
         """Initializes storage variables for hand and pose data."""
@@ -132,21 +170,16 @@ class GestureRecognitionSystem:
             dist=self.dist, length=self.length
         )
 
-    @MyTimer.timing_decorator(use_cv2)
-    def __start_image_thread(self) -> bool:
-        """Starts a thread for reading images."""
-        try:
-            self.frame_lock = threading.Lock()
-            self.image_thread = threading.Thread(
-                target=self._read_image_thread, daemon=True)
-            self.image_thread.start()
-            return True
-        except Exception as e:
-            print(f"Error starting image thread: {e}")
-            return False
+    @MyTimer.timing_decorator(use_cv2=True)
+    def __start_image_thread(self) -> None:
+        """Start thread to capture images."""
+        self.frame_lock = threading.Lock()
+        self.image_thread = threading.Thread(target=self._read_image_thread,
+                                             daemon=True)
+        self.image_thread.start()
 
-    def _read_image_thread(self) -> None:  # Review this method after the next snippet
-        """Thread function to read and capture images."""
+    def _read_image_thread(self) -> None:
+        """Image capture thread."""
         # while self.cap.isOpened():
         while True:
             success, frame = self.cap.read()
@@ -156,36 +189,27 @@ class GestureRecognitionSystem:
                 with self.frame_lock:
                     self.frame_captured = frame
 
-    @MyTimer.timing_decorator(use_cv2)
+
+
+    @MyTimer.timing_decorator()
     def run(self) -> None:
-        """
-        Main execution loop for the gesture recognition system.
-        Based on the mode, it processes frames for gesture detection
-        and recognition in real-time.
-        """
+        """Main system loop for gesture recognition based on mode."""
         self._setup_mode()
-        t_frame = MyTimer.get_current_time(self.use_cv2)
+        t_frame = MyTimer.get_current_time()
 
         while self.loop:
-            if MyTimer.elapsed_time(t_frame, self.use_cv2) > (1 / self.fps):
-                t_frame = MyTimer.get_current_time(self.use_cv2)
+            if MyTimer.elapsed_time(t_frame) > (1 / self.fps):
+                t_frame = MyTimer.get_current_time()
 
-                # Stop the system if 'q' is pressed
                 if cv2.waitKey(1) & 0xFF == ord("q"):
                     self.stop()
-
-                # In dataset mode, stop after max gestures are collected
                 if self.mode == 'D' and self.num_gest >= self.max_num_gest:
                     self.stop()
 
-                # Process the current stage (for gesture detection/recognition)
                 self.__process_stage()
 
     def stop(self) -> None:
-        """
-        Stops the gesture recognition system and releases resources.
-        Ensures that the camera and all OpenCV windows are properly closed.
-        """
+        """Stops the system and releases resources."""
         self.loop = False
         if self.cap.isOpened():
             self.cap.release()
