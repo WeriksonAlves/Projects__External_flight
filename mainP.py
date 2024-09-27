@@ -139,8 +139,7 @@ def main():
 
     # Create and run the gesture recognition system
     gesture_system = create_gesture_recognition_system(
-        real_sense, operation_mode, sps
-        )
+        real_sense, operation_mode, sps)
 
     try:
         gesture_system.run()
