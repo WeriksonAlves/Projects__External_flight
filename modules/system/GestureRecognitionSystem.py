@@ -296,7 +296,7 @@ class GestureRecognitionSystem:
             return self.frame_captured is not None, self.frame_captured
 
     @MyTimer.timing_decorator(use_cv2)
-    def _tracking_processor(self, frame: np.ndarray) -> np.ndarray:
+    def _tracking_processor(self, frame: np.ndarray) -> Tuple[bool, np.ndarray]:
         """
         Processes the input frame for operator detection and tracking. Returns
         the cropped image of the operator.
@@ -308,7 +308,7 @@ class GestureRecognitionSystem:
                                               annotated_frame, frame)
         except Exception as e:
             print(f"Error during operator detection and tracking: {e}")
-            return frame
+            return False, frame
 
     def centralize_operator(self, frame: np.ndarray,
                             bounding_box: Tuple[int, int, int, int],
