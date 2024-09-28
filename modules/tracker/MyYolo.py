@@ -96,7 +96,7 @@ class MyYolo(TrackerInterface):
 
     def crop_operator(self, boxes: np.ndarray, track_ids: List[int],
                       annotated_frame: np.ndarray, frame: np.ndarray,
-                      track_length: int = 90) -> Optional[np.ndarray]:
+                      track_length: int = 90) -> Tuple[bool, np.ndarray]:
         """
         Tracks and highlights the operator in the captured frame, and crops
         the region of interest (ROI) for the operator.
@@ -121,6 +121,6 @@ class MyYolo(TrackerInterface):
             x, y, w, h = map(int, box)
             person_roi = frame[max(0, y - h // 2): y + h // 2,
                                max(0, x - w // 2): x + w // 2]
-            return cv2.flip(person_roi, 1)
+            return True, cv2.flip(person_roi, 1)
 
-        return None
+        return False, None

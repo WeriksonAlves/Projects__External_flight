@@ -16,7 +16,7 @@ class MyTimer:
     """
 
     @staticmethod
-    def get_current_time(use_cv2: bool = False) -> float:
+    def get_current_time(use_cv2: bool = True) -> float:
         """
         Capture the current time based on the selected method.
 
@@ -26,7 +26,7 @@ class MyTimer:
         return cv2.getTickCount() if use_cv2 else time.perf_counter()
 
     @staticmethod
-    def elapsed_time(start_time: float, use_cv2: bool = False) -> float:
+    def elapsed_time(start_time: float, use_cv2: bool = True) -> float:
         """
         Calculate the elapsed time since the start time.
 
@@ -39,7 +39,7 @@ class MyTimer:
         return time.perf_counter() - start_time
 
     @staticmethod
-    def timing_decorator(use_cv2: bool = False, log_output: bool = True
+    def timing_decorator(use_cv2: bool = True, log_output: bool = True
                          ) -> Callable:
         """
         Decorator to measure and log the execution time of a function.
