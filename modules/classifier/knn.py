@@ -82,9 +82,9 @@ class KNN(ClassifierInterface):
         classification_times = []
 
         for sample in X_val:
-            start_time = MyTimer.get_current_time(high_resolution=True)
+            start_time = MyTimer.get_current_time()
             predictions.append(self.predict(sample))
-            elapsed = MyTimer.elapsed_time(start_time, high_resolution=True)
+            elapsed = MyTimer.elapsed_time(start_time)
             classification_times.append(elapsed)
 
         return predictions, classification_times

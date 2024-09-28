@@ -286,6 +286,7 @@ class GestureRecognitionSystem:
             self.current_folder, self.files_name, self.proportion)
         self.classifier.fit(x_train, y_train)
         self.y_predict, self.time_classifier = self.classifier.validate(x_val)
+        self.target_names, _ = MyDataHandler.initialize_database(self.database)
         MyDataHandler.save_results(self.y_val.tolist(), self.y_predict,
                                    self.time_classifier, self.target_names,
                                    os.path.join(self.current_folder,
