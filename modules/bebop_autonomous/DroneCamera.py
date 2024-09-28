@@ -224,8 +224,7 @@ class DroneCamera:
         Adjusts the camera orientation based on the operator's position in the
         frame. Returns the pitch and yaw adjustments required.
         """
-        dist_center_h, dist_center_v = self.centralize_operator(frame,
-                                                                        boxes)
+        dist_center_h, dist_center_v = self.centralize_operator(frame, boxes)
         sc_pitch = np.tanh(-dist_center_v * Gi[0]) * Ge[0] if np.abs(
             dist_center_v) > 0.25 else 0
         sc_yaw = np.tanh(dist_center_h * Gi[1]) * Ge[1] if np.abs(
@@ -257,4 +256,3 @@ class ParameterListener:
             if param.name == "compression_quality":
                 rospy.loginfo(f"Changing compression quality to {param.value}")
                 self.drone_camera.compression_quality = param.value
-
