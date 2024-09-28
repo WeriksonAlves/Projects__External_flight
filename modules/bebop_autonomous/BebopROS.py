@@ -11,7 +11,6 @@ class BebopROS:
 
         if not os.path.exists(self.file_path): os.makedirs(self.file_path)
 
-
     def VideoCapture(self):
         try:
             self.camera = DroneCamera(self.file_path)
