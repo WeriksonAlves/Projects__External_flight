@@ -83,12 +83,12 @@ def initialize_servo_system(num_servos):
         return None
 
 
-def create_gesture_recognition_system(camera, mode, sps):
+def create_gesture_recognition_system(camera, operation_mode, sps):
     """Create the Gesture Recognition System."""
     return GestureRecognitionSystem(
         base_dir=os.path.dirname(__file__),  # Get the current folder
-        config=InitializeConfig(camera, 15),  # Initialize the configuration
-        operation=mode,
+        configs=InitializeConfig(camera, 15),  # Initialize the configuration
+        operation_mode=operation_mode,
         tracking_model=MyYolo('yolov8n-pose.pt'),
         feature_hand=MyHandsMediaPipe(
             mp.solutions.hands.Hands(
@@ -112,11 +112,11 @@ def create_gesture_recognition_system(camera, mode, sps):
         ),
         classifier=KNN(
             KNeighborsClassifier(
-                n_neighbors=mode.k,
+                n_neighbors=operation_mode.k,
                 algorithm='auto',
                 weights='uniform'
             )
-        ) if hasattr(mode, 'k') else None,
+        ) if hasattr(operation_mode, 'k') else None,
         sps=sps
     )
 

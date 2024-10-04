@@ -30,8 +30,8 @@ class GestureRecognitionSystem:
 
     def __init__(self,
                  base_dir: str,
-                 config: InitializeConfig,
-                 operation: Union[ModeDataset, ModeValidate, ModeRealTime],
+                 configs: InitializeConfig,
+                 operation_mode: Union[ModeDataset, ModeValidate, ModeRealTime],
                  tracking_model: TrackerInterface,
                  feature_hand: ExtractorInterface,
                  feature_pose: ExtractorInterface,
@@ -40,9 +40,9 @@ class GestureRecognitionSystem:
         """
         Initialize the GestureRecognitionSystem.
 
-        :param current_folder: Directory to store and access gesture data.
-        :param config: Configuration settings for the camera.
-        :param operation: Operation mode for the system.
+        :param base_dir: Directory to store and access gesture data.
+        :param configs: Configuration settings for the camera.
+        :param operation_mode: Operation mode for the system.
         :param tracking_model: Object tracking model for gesture recognition.
         :param feature_hand: Feature extractor for hand gestures.
         :param feature_pose: Feature extractor for pose gestures.
@@ -50,9 +50,9 @@ class GestureRecognitionSystem:
         :param sps: Servo Position System for controlling the camera
             (optional).
         """
-        self.BASE_DIR = base_dir
-        self.config = config
-        self.operation = operation
+        self.base_dir = base_dir
+        self.configs = configs
+        self.operation_mode = operation_mode
         self.tracker = tracking_model
         self.feature_hand = feature_hand
         self.feature_pose = feature_pose
@@ -78,7 +78,7 @@ class GestureRecognitionSystem:
     def __initialize_operation(self) -> bool:
         """Initializes operation mode and parameters for each mode."""
         try:
-            self.mode = self.operation.mode
+            self.mode = self.operation_mode.task
             mode_initializers = {
                 'D': self.__initialize_dataset_mode,
                 'V': self.__initialize_validation_mode,
@@ -98,26 +98,24 @@ class GestureRecognitionSystem:
 
     def __initialize_dataset_mode(self) -> None:
         """Initializes dataset collection mode."""
-        self.database = self.operation.database
-        self.file_name_build = self.operation.file_name_build
-        self.max_num_gest = self.operation.max_num_gest
-        self.dist = self.operation.dist
-        self.length = self.operation.length
+        self.database = self.operation_mode.database
+        self.file_name_build = self.operation_mode.file_name_build
+        self.max_num_gest = self.operation_mode.max_num_gest
         logger.debug("Dataset mode initialized.")
 
     def __initialize_validation_mode(self) -> None:
         """Initializes validation mode."""
-        self.database = self.operation.database
-        self.proportion = self.operation.proportion
-        self.files_name = self.operation.files_name
-        self.file_name_val = self.operation.file_name_val
+        self.database = self.operation_mode.database
+        self.proportion = self.operation_mode.proportion
+        self.files_name = self.operation_mode.files_name
+        self.file_name_val = self.operation_mode.file_name_val
         logger.debug("Validation mode initialized.")
 
     def __initialize_real_time_mode(self) -> None:
         """Initializes real-time gesture recognition mode."""
-        self.database = self.operation.database
-        self.proportion = self.operation.proportion
-        self.files_name = self.operation.files_name
+        self.database = self.operation_mode.database
+        self.proportion = self.operation_mode.proportion
+        self.files_name = self.operation_mode.files_name
         logger.debug("Real-time mode initialized.")
 
     def __initialize_variables(self) -> bool:
@@ -127,9 +125,9 @@ class GestureRecognitionSystem:
         :return: True if initialization is successful, False otherwise.
         """
         try:
-            self.cap = self.config.cap
-            self.dist = self.config.dist
-            self.length = self.config.length
+            self.cap = self.configs.cap
+            self.dist = self.configs.dist
+            self.length = self.configs.length
             self.stage = 0
             self.num_gest = 0
             self.dist_point = 1.0
@@ -263,13 +261,13 @@ class GestureRecognitionSystem:
             'RT': self.__load_and_fit_classifier,
             'V': self.__validate_classifier
         }
-        action = mode_actions.get(self.operation.mode)
+        action = mode_actions.get(self.operation_mode.task)
         if action:
             action()
 
         self.loop = True if self.mode != 'V' else False
 
-        logger.debug(f"Setting up system for mode: {self.operation.mode}")
+        logger.debug(f"Setting up system for mode: {self.operation_mode.task}")
 
     def __initialize_database(self) -> None:
         """Initialize gesture database."""
@@ -279,19 +277,19 @@ class GestureRecognitionSystem:
     def __load_and_fit_classifier(self) -> None:
         """Load and fit classifier for real-time recognition."""
         x_train, y_train, _, _ = MyDataHandler.load_database(
-            self.BASE_DIR, self.files_name, self.proportion)
+            self.base_dir, self.files_name, self.proportion)
         self.classifier.fit(x_train, y_train)
 
     def __validate_classifier(self) -> None:
         """Validate classifier using dataset."""
         x_train, y_train, x_val, self.y_val = MyDataHandler.load_database(
-            self.BASE_DIR, self.files_name, self.proportion)
+            self.base_dir, self.files_name, self.proportion)
         self.classifier.fit(x_train, y_train)
         self.y_predict, self.time_classifier = self.classifier.validate(x_val)
         self.target_names, _ = MyDataHandler.initialize_database(self.database)
         MyDataHandler.save_results(self.y_val.tolist(), self.y_predict,
                                    self.time_classifier, self.target_names,
-                                   os.path.join(self.BASE_DIR,
+                                   os.path.join(self.base_dir,
                                                 self.file_name_val))
 
     # @MyTimer.timing_decorator()
@@ -542,7 +540,7 @@ class GestureRecognitionSystem:
         """
         Saves the current database to a file.
         """
-        file_path = os.path.join(self.BASE_DIR, self.file_name_build)
+        file_path = os.path.join(self.base_dir, self.file_name_build)
         MyDataHandler.save_database(self.sample, self.database, file_path)
 
     # @MyTimer.timing_decorator()

@@ -93,12 +93,10 @@ class ModeDataset:
         self, database: Dict[str, List], file_name_build: str,
         max_num_gest: int = 50, dist: float = 0.025, length: int = 15
     ) -> None:
-        self.mode = 'D'
+        self.task = 'D'
         self.database = database
         self.file_name_build = file_name_build
         self.max_num_gest = max_num_gest
-        self.dist = dist
-        self.length = length
 
 
 class ModeValidate:
@@ -116,7 +114,7 @@ class ModeValidate:
         self, files_name: List[str], database: Dict[str, List], name_val: str,
         proportion: float = 0.7, n_class: int = 5, n_sample_class: int = 10
     ) -> None:
-        self.mode = 'V'
+        self.task = 'V'
         self.files_name = files_name
         self.database = database
         self.proportion = proportion
@@ -164,7 +162,7 @@ class ModeRealTime:
         self, files_name: List[str], database: Dict[str, List],
         proportion: float = 0.7, n_class: int = 5, n_sample_class: int = 10
     ) -> None:
-        self.mode = 'RT'
+        self.task = 'RT'
         self.files_name = files_name
         self.database = database
         self.proportion = proportion
