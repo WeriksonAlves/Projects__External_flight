@@ -136,7 +136,7 @@ def main():
     rospy.init_node('RecognitionSystem', anonymous=True)
 
     # Initialize Gesture Recognition System
-    operation_mode = initialize_modes(2)
+    operation_mode = initialize_modes(3)
 
     # Initialize the Servo Position System
     num_servos = 0  # Adjust the number of servos if necessary
