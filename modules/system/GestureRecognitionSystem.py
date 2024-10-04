@@ -28,7 +28,9 @@ class GestureRecognitionSystem:
     dataset collection modes.
     """
 
-    def __init__(self, current_folder: str, config: InitializeConfig,
+    def __init__(self,
+                 current_folder: str,
+                 config: InitializeConfig,
                  operation: Union[ModeDataset, ModeValidate, ModeRealTime],
                  tracking_model: TrackerInterface,
                  feature_hand: ExtractorInterface,

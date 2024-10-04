@@ -86,9 +86,9 @@ def initialize_servo_system(num_servos):
 def create_gesture_recognition_system(camera, mode, sps):
     """Create the Gesture Recognition System."""
     return GestureRecognitionSystem(
-        config=InitializeConfig(camera, 15),
+        current_folder=os.path.dirname(__file__),  # Get the current folder
+        config=InitializeConfig(camera, 15),  # Initialize the configuration
         operation=mode,
-        current_folder=os.path.dirname(__file__),
         tracking_model=MyYolo('yolov8n-pose.pt'),
         feature_hand=MyHandsMediaPipe(
             mp.solutions.hands.Hands(
