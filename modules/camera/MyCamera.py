@@ -3,18 +3,7 @@ from typing import Union
 from ..bebop_autonomous.BebopROS import BebopROS
 
 
-class SingletonMeta(type):
-    """ A metaclass for implementing Singleton design pattern. """
-    _instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
-
-
-class MyCamera(metaclass=SingletonMeta):
+class MyCamera():
     """
     MyCamera class for initializing camera or drone-based video
     capture configuration.

@@ -6,12 +6,12 @@ import logging
 from typing import Optional, Union, Tuple
 from ..auxiliary.MyDataHandler import MyDataHandler
 from ..auxiliary.MyTimer import MyTimer
+from ..camera.MyCamera import MyCamera
 from ..interfaces.ClassifierInterface import ClassifierInterface
 from ..interfaces.ExtractorInterface import ExtractorInterface
 from ..interfaces.TrackerInterface import TrackerInterface
 from ..servo.ServoPositionSystem import ServoPositionSystem
-from ..system.SystemSettings import (InitializeConfig, ModeDataset,
-                                     ModeValidate, ModeRealTime)
+from ..system.SystemSettings import (ModeDataset, ModeValidate, ModeRealTime)
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +31,7 @@ class GestureRecognitionSystem:
     def __init__(
         self,
         base_dir: str,
-        configs: InitializeConfig,
+        configs: MyCamera,
         operation_mode: Union[ModeDataset, ModeValidate, ModeRealTime],
         tracker_model: TrackerInterface,
         hand_extractor_model: ExtractorInterface,

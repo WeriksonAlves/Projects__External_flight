@@ -4,10 +4,10 @@ import rospy
 from std_msgs.msg import Int32
 from modules import (
     ModeFactory,
-    InitializeConfig,
     ServoPositionSystem,
     BebopROS,
     GestureRecognitionSystem,
+    MyCamera,
     MyYolo,
     MyHandsMediaPipe,
     MyPoseMediaPipe,
@@ -87,7 +87,7 @@ def create_gesture_recognition_system(camera, operation_mode, sps):
     """Create the Gesture Recognition System."""
     return GestureRecognitionSystem(
         base_dir=os.path.dirname(__file__),  # Get the current folder
-        configs=InitializeConfig(camera, 15),  # Initialize the configuration
+        configs=MyCamera(camera, 15),  # Initialize the configuration
         operation_mode=operation_mode,
         tracker_model=MyYolo('yolov8n-pose.pt'),
         hand_extractor_model=MyHandsMediaPipe(
