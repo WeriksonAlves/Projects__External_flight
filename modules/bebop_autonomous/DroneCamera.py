@@ -176,15 +176,18 @@ class DroneCamera:
 
     def isOpened(self) -> bool:
         """
-        Check if the ROS image topics are publishing or if the camera is active.
+        Check if the ROS image topics are publishing or if the camera is
+        active.
         :return: bool: True if the camera is operational, False otherwise.
         """
         return self.success_flags["isOpened"]
     
     def release(self) -> None:
         """
-        Simulate the behavior of OpenCV's release() method, which would release the camera.
-        Here, it resets the internal state indicating the camera is no longer active.
+        Simulate the behavior of OpenCV's release() method, which would
+        release the camera.
+        Here, it resets the internal state indicating the camera is no longer
+        active.
         """
         rospy.loginfo("Releasing camera resources")
         self.success_flags = {key: False for key in self.success_flags}

@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 import threading
-import logging
+import rospy
 from typing import Optional, Union, Tuple
 from ..auxiliary.MyDataHandler import MyDataHandler
 from ..auxiliary.MyTimer import MyTimer
@@ -12,14 +12,6 @@ from ..interfaces.ExtractorInterface import ExtractorInterface
 from ..interfaces.TrackerInterface import TrackerInterface
 from ..servo.ServoPositionSystem import ServoPositionSystem
 from ..system.SystemSettings import (ModeDataset, ModeValidate, ModeRealTime)
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler()]
-)
-logger = logging.getLogger(__name__)
 
 
 class GestureRecognitionSystem:
@@ -64,17 +56,12 @@ class GestureRecognitionSystem:
         # Initialize system components
         self.__initialize_system()
 
-    @property
-    def fps(self):
-        """Retrieve frames per second from the camera."""
-        return self.cap.get(cv2.CAP_PROP_FPS) if self.cap else None
-
-    # @MyTimer.timing_decorator()
+    @MyTimer.timing_decorator()
     def __initialize_system(self) -> None:
         """Initializes the gesture recognition system."""
         if not (self.__initialize_operation(
         ) and self.__initialize_variables() and self.__start_image_thread()):
-            logger.error("System initialization failed.")
+            rospy.logerr("System initialization failed.")
             self.__terminate_system()
 
     def __initialize_operation(self) -> bool:
@@ -90,12 +77,12 @@ class GestureRecognitionSystem:
             initializer = mode_initializers.get(self.mode)
             if initializer:
                 initializer()
-                logger.info(f"Initialized mode: {self.mode}")
+                rospy.loginfo(f"Initialized mode: {self.mode}")
                 return True
 
             raise ValueError(f"Invalid mode: {self.mode}")
         except Exception as e:
-            logger.exception(f"Error initializing operation mode: {e}")
+            rospy.logerr(f"Error initializing operation mode: {e}")
             return False
 
     def __initialize_dataset_mode(self) -> None:
@@ -103,7 +90,7 @@ class GestureRecognitionSystem:
         self.database = self.operation_mode.database
         self.file_name_build = self.operation_mode.file_name_build
         self.max_num_gest = self.operation_mode.max_num_gest
-        logger.debug("Dataset mode initialized.")
+        rospy.logdebug("Dataset mode initialized.")
 
     def __initialize_validation_mode(self) -> None:
         """Initializes validation mode."""
@@ -111,14 +98,14 @@ class GestureRecognitionSystem:
         self.proportion = self.operation_mode.proportion
         self.files_name = self.operation_mode.files_name
         self.file_name_val = self.operation_mode.file_name_val
-        logger.debug("Validation mode initialized.")
+        rospy.logdebug("Validation mode initialized.")
 
     def __initialize_real_time_mode(self) -> None:
         """Initializes real-time gesture recognition mode."""
         self.database = self.operation_mode.database
         self.proportion = self.operation_mode.proportion
         self.files_name = self.operation_mode.files_name
-        logger.debug("Real-time mode initialized.")
+        rospy.logdebug("Real-time mode initialized.")
 
     def __initialize_variables(self) -> bool:
         """
@@ -128,6 +115,7 @@ class GestureRecognitionSystem:
         """
         try:
             self.cap = self.configs.cap
+            self.fps = self.configs.fps
             self.dist = self.configs.dist
             self.length = self.configs.length
             self.stage = 0
@@ -143,10 +131,10 @@ class GestureRecognitionSystem:
 
             # Initialize hand and pose storage
             self.__initialize_storage_variables()
-            logger.info("System variables initialized.")
+            rospy.loginfo("System variables initialized.")
             return True
         except Exception as e:
-            logger.exception(f"Error initializing variables: {e}")
+            rospy.logerr(f"Error initializing variables: {e}")
             return False
 
     def __initialize_storage_variables(self) -> None:
@@ -157,7 +145,7 @@ class GestureRecognitionSystem:
             dist=self.dist,
             length=self.length
         )
-        logger.debug("Storage variables initialized.")
+        rospy.logdebug("Storage variables initialized.")
 
     def __start_image_thread(self) -> bool:
         """
@@ -173,10 +161,10 @@ class GestureRecognitionSystem:
                 daemon=True
             )
             self.image_thread.start()
-            logger.info("Image reading thread started.")
+            rospy.loginfo("Image reading thread started.")
             return True
         except Exception as e:
-            logger.exception(f"Error starting image thread: {e}")
+            rospy.logerr(f"Error starting image thread: {e}")
             return False
 
     def __read_image_thread(self) -> None:
@@ -184,7 +172,7 @@ class GestureRecognitionSystem:
         Thread function to read and capture images.
         Continuously reads frames from the camera and updates `frame_captured`.
         """
-        logger.debug("Image thread running.")
+        rospy.logdebug("Image thread running.")
         while not self.stop_event.is_set():
             success, frame = self.cap.read()
             if success:
@@ -193,9 +181,9 @@ class GestureRecognitionSystem:
                         frame, (640, 480)) if frame.shape[:2] != (
                             480, 640) else frame
             else:
-                logger.warning("Failed to read frame from camera.")
+                rospy.logwarn("Failed to read frame from camera.")
                 break
-        logger.debug("Image thread terminating.")
+        rospy.logdebug("Image thread terminating.")
 
     def __terminate_system(self) -> None:
         """Gracefully terminate system."""
@@ -207,51 +195,51 @@ class GestureRecognitionSystem:
         cv2.destroyAllWindows()
         if self.sps:
             self.sps.terminate()
-        logger.info("System terminated successfully.")
+        rospy.loginfo("System terminated successfully.")
 
-    # @MyTimer.timing_decorator()
+    @MyTimer.timing_decorator()
     def run(self) -> None:
         """Main execution loop for the gesture recognition system."""
         self._setup_mode()
         t_frame = MyTimer.get_current_time()
-        logger.info("Starting main execution loop.")
+        rospy.loginfo("Starting main execution loop.")
         while self.loop:
             current_time = MyTimer.get_current_time()
             if MyTimer.elapsed_time(t_frame) > (1 / self.fps):
                 t_frame = current_time
 
                 if cv2.waitKey(1) & 0xFF == ord("q"):
-                    logger.info("Exit signal received (q pressed).")
+                    rospy.loginfo("Exit signal received (q pressed).")
                     self.stop()
 
                 if self.mode == 'D' and self.num_gest >= self.max_num_gest:
-                    logger.info("Maximum number of gestures collected.")
+                    rospy.loginfo("Maximum number of gestures collected.")
                     self.stop()
 
                 self._process_stage()
 
-    # @MyTimer.timing_decorator()
+    @MyTimer.timing_decorator()
     def stop(self) -> None:
         """Stops the gesture recognition system and releases resources."""
         if not self.loop:
-            logger.debug("Stop called, but system is already stopping.")
+            rospy.logdebug("Stop called, but system is already stopping.")
             return
 
-        logger.info("Stopping gesture recognition system.")
+        rospy.loginfo("Stopping gesture recognition system.")
         self.loop = False
         if hasattr(self, 'stop_event'):
             self.stop_event.set()
 
         if hasattr(self, 'image_thread') and self.image_thread.is_alive():
             self.image_thread.join(timeout=2)
-            logger.debug("Image thread joined.")
+            rospy.logdebug("Image thread joined.")
 
         if hasattr(self, 'cap') and self.cap.isOpened():
             self.cap.release()
-            logger.debug("Camera released.")
+            rospy.logdebug("Camera released.")
 
         cv2.destroyAllWindows()
-        logger.info("Gesture recognition system stopped.")
+        rospy.loginfo("Gesture recognition system stopped.")
 
     def _setup_mode(self) -> None:
         """Setup mode based on the operation."""
@@ -266,7 +254,8 @@ class GestureRecognitionSystem:
 
         self.loop = True if self.mode != 'V' else False
 
-        logger.debug(f"Setting up system for mode: {self.operation_mode.task}")
+        rospy.logdebug(f"Setting up system for mode: "
+                       f"{self.operation_mode.task}")
 
     def __initialize_database(self) -> None:
         """Initialize gesture database."""
@@ -292,7 +281,7 @@ class GestureRecognitionSystem:
                                    os.path.join(self.base_dir,
                                                 self.file_name_val))
 
-    # @MyTimer.timing_decorator()
+    @MyTimer.timing_decorator()
     def _process_stage(self) -> None:
         """
         Handles different stages of gesture recognition based on the mode.
@@ -325,6 +314,10 @@ class GestureRecognitionSystem:
             cropped_image = self.tracking_processor(frame)
             if cropped_image is not None:
                 return self.extraction_processor(cropped_image)
+            else:
+                self._annotate_image(frame)
+        else:
+            print("Failed to read frame from camera.")
         return False
 
     def read_image(self) -> Tuple[bool, np.ndarray]:
@@ -335,7 +328,6 @@ class GestureRecognitionSystem:
         with self.frame_lock:
             return self.frame_captured is not None, self.frame_captured
 
-    # @MyTimer.timing_decorator()
     def tracking_processor(self, frame: np.ndarray) -> Union[np.ndarray, None]:
         """
         Detects and tracks the operator from the given frame.
@@ -348,10 +340,9 @@ class GestureRecognitionSystem:
                 boxes, track_ids, annotated_frame, frame)
             return cropped_image if success else None
         except Exception as e:
-            logger.error(f"Error during operator detection and tracking: {e}")
+            rospy.logerr(f"Error during operator detection and tracking: {e}")
             return None
 
-    # @MyTimer.timing_decorator()
     def extraction_processor(self, cropped_image: np.ndarray) -> bool:
         """
         Extracts hand and wrist features and updates gesture stage.
@@ -367,7 +358,7 @@ class GestureRecognitionSystem:
                 self._transition_to_reduction_stage()
             return True
         except Exception as e:
-            logger.error(f"Error during feature extraction: {e}")
+            rospy.logerr(f"Error during feature extraction: {e}")
             self._handle_processing_error(cropped_image)
             return False
 
@@ -510,7 +501,6 @@ class GestureRecognitionSystem:
                     (255, 255, 255), 1, cv2.LINE_AA)
         cv2.imshow('RealSense Camera', frame)
 
-    # @MyTimer.timing_decorator()
     def process_reduction_stage(self) -> None:
         """
         Reduces the dimensionality of the wrist history matrix.
@@ -520,7 +510,6 @@ class GestureRecognitionSystem:
         self.sample['data_reduce_dim'] = np.dot(self.body_history.T,
                                                 self.body_history)
 
-    # @MyTimer.timing_decorator()
     def update_database(self) -> None:
         """
         Updates the database with the current gesture data and resets sample
@@ -548,7 +537,6 @@ class GestureRecognitionSystem:
         file_path = os.path.join(self.base_dir, self.file_name_build)
         MyDataHandler.save_database(self.sample, self.database, file_path)
 
-    # @MyTimer.timing_decorator()
     def classify_gestures(self) -> None:
         """
         Classifies gestures in real-time mode and resets sample data for the
@@ -574,5 +562,5 @@ class GestureRecognitionSystem:
             f"\nThe gesture performed belongs to class {predicted_class} " +
             f"and took {classification_time:.3f}ms to be classified.\n"
         )
-        logger.info(f"\nThe gesture belongs to class {predicted_class} and "
-                    f"took {classification_time:.3f}ms to classify.\n")
+        rospy.loginfo(f"\nThe gesture belongs to class {predicted_class} and "
+                      f"took {classification_time:.3f}ms to classify.\n")

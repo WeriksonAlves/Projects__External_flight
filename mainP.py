@@ -135,15 +135,15 @@ def main():
     """Main function to run the Gesture Recognition System."""
     rospy.init_node('RecognitionSystem', anonymous=True)
 
+    # Initialize the camera to be used
+    camera = initialize_camera('bebop')
+
     # Initialize Gesture Recognition System
     operation_mode = initialize_modes(3)
 
     # Initialize the Servo Position System
     num_servos = 0  # Adjust the number of servos if necessary
     sps = initialize_servo_system(num_servos)
-
-    # Initialize the camera to be used
-    camera = initialize_camera('realsense')
 
     # Create and run the gesture recognition system
     gesture_system = create_gesture_recognition_system(camera, operation_mode,

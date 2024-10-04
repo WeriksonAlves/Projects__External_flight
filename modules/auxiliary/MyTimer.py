@@ -2,11 +2,7 @@ import cv2
 import time
 import functools
 from typing import Callable, Any
-import logging
-
-# Setting up the logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+import rospy
 
 
 class MyTimer:
@@ -60,7 +56,7 @@ class MyTimer:
                            f"-> {fps:.0f} FPS")
 
                 if log_output:
-                    logger.info(message)
+                    rospy.loginfo(message)
                 else:
                     print(message)
 

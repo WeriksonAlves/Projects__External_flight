@@ -1,9 +1,7 @@
 import os
-import logging
+import rospy
 from functools import wraps
 from .DroneCamera import DroneCamera
-
-logger = logging.getLogger(__name__)
 
 
 def ensure_directory_exists(method):
@@ -12,7 +10,7 @@ def ensure_directory_exists(method):
     def wrapper(self, *args, **kwargs):
         if not os.path.exists(self.file_path):
             os.makedirs(self.file_path)
-            logger.info(f"Created directory: {self.file_path}")
+            rospy.loginfo(f"Created directory: {self.file_path}")
         return method(self, *args, **kwargs)
     return wrapper
 
