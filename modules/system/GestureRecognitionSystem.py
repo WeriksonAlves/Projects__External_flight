@@ -32,9 +32,9 @@ class GestureRecognitionSystem:
                  base_dir: str,
                  configs: InitializeConfig,
                  operation_mode: Union[ModeDataset, ModeValidate, ModeRealTime],
-                 tracking_model: TrackerInterface,
-                 feature_hand: ExtractorInterface,
-                 feature_pose: ExtractorInterface,
+                 tracker_model: TrackerInterface,
+                 hand_extractor_model: ExtractorInterface,
+                 body_extractor_model: ExtractorInterface,
                  classifier: Optional[ClassifierInterface] = None,
                  sps: Optional[ServoPositionSystem] = None) -> None:
         """
@@ -53,9 +53,9 @@ class GestureRecognitionSystem:
         self.base_dir = base_dir
         self.configs = configs
         self.operation_mode = operation_mode
-        self.tracker = tracking_model
-        self.hand_extractor = feature_hand
-        self.body_extractor = feature_pose
+        self.tracker = tracker_model
+        self.hand_extractor = hand_extractor_model
+        self.body_extractor = body_extractor_model
         self.classifier = classifier
         self.sps = sps
 

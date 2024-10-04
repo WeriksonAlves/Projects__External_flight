@@ -89,8 +89,8 @@ def create_gesture_recognition_system(camera, operation_mode, sps):
         base_dir=os.path.dirname(__file__),  # Get the current folder
         configs=InitializeConfig(camera, 15),  # Initialize the configuration
         operation_mode=operation_mode,
-        tracking_model=MyYolo('yolov8n-pose.pt'),
-        feature_hand=MyHandsMediaPipe(
+        tracker_model=MyYolo('yolov8n-pose.pt'),
+        hand_extractor_model=MyHandsMediaPipe(
             mp.solutions.hands.Hands(
                 static_image_mode=False,
                 max_num_hands=1,
@@ -99,7 +99,7 @@ def create_gesture_recognition_system(camera, operation_mode, sps):
                 min_tracking_confidence=0.75
             )
         ),
-        feature_pose=MyPoseMediaPipe(
+        body_extractor_model=MyPoseMediaPipe(
             mp.solutions.pose.Pose(
                 static_image_mode=False,
                 model_complexity=1,
