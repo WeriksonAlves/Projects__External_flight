@@ -29,7 +29,7 @@ class GestureRecognitionSystem:
     """
 
     def __init__(self,
-                 current_folder: str,
+                 base_dir: str,
                  config: InitializeConfig,
                  operation: Union[ModeDataset, ModeValidate, ModeRealTime],
                  tracking_model: TrackerInterface,
@@ -50,7 +50,7 @@ class GestureRecognitionSystem:
         :param sps: Servo Position System for controlling the camera
             (optional).
         """
-        self.current_folder = current_folder
+        self.BASE_DIR = base_dir
         self.config = config
         self.operation = operation
         self.tracker = tracking_model
@@ -279,19 +279,19 @@ class GestureRecognitionSystem:
     def __load_and_fit_classifier(self) -> None:
         """Load and fit classifier for real-time recognition."""
         x_train, y_train, _, _ = MyDataHandler.load_database(
-            self.current_folder, self.files_name, self.proportion)
+            self.BASE_DIR, self.files_name, self.proportion)
         self.classifier.fit(x_train, y_train)
 
     def __validate_classifier(self) -> None:
         """Validate classifier using dataset."""
         x_train, y_train, x_val, self.y_val = MyDataHandler.load_database(
-            self.current_folder, self.files_name, self.proportion)
+            self.BASE_DIR, self.files_name, self.proportion)
         self.classifier.fit(x_train, y_train)
         self.y_predict, self.time_classifier = self.classifier.validate(x_val)
         self.target_names, _ = MyDataHandler.initialize_database(self.database)
         MyDataHandler.save_results(self.y_val.tolist(), self.y_predict,
                                    self.time_classifier, self.target_names,
-                                   os.path.join(self.current_folder,
+                                   os.path.join(self.BASE_DIR,
                                                 self.file_name_val))
 
     # @MyTimer.timing_decorator()
@@ -542,7 +542,7 @@ class GestureRecognitionSystem:
         """
         Saves the current database to a file.
         """
-        file_path = os.path.join(self.current_folder, self.file_name_build)
+        file_path = os.path.join(self.BASE_DIR, self.file_name_build)
         MyDataHandler.save_database(self.sample, self.database, file_path)
 
     # @MyTimer.timing_decorator()
