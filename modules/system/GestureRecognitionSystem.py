@@ -130,7 +130,7 @@ class GestureRecognitionSystem:
             self.length = self.config.length
             self.stage = 0
             self.num_gest = 0
-            self.dist_virtual_point = 1.0
+            self.dist_point = 1.0
             self.sc_pitch = 0.0
             self.sc_yaw = 0.0
             self.hand_results = None
@@ -435,14 +435,14 @@ class GestureRecognitionSystem:
         Checks if the gesture trigger is activated based on hand history.
         If activated, moves to the next stage.
         """
-        trigger, self.hand_history, self.dist_virtual_point = self._is_trigger_enabled(
+        trigger, self.hand_history, self.dist_point = self._is_trigger_enabled(
             self.hand_history,
             self.sample['par_trigger_length'],
             self.sample['par_trigger_dist']
         )
         if trigger:
             self.stage = 1
-            self.dist_virtual_point = 1
+            self.dist_point = 1
             self.time_gesture = MyTimer.get_current_time()
             self.time_action = MyTimer.get_current_time()
 
@@ -461,8 +461,8 @@ class GestureRecognitionSystem:
         mean_coords = np.mean(storage, axis=0).reshape(-1, 2)
         std_dev = np.std(mean_coords, axis=0)
 
-        dist_virtual_point = np.sqrt(std_dev[0] ** 2 + std_dev[1] ** 2)
-        return dist_virtual_point < dist, storage, dist_virtual_point
+        dist_point = np.sqrt(std_dev[0] ** 2 + std_dev[1] ** 2)
+        return dist_point < dist, storage, dist_point
 
     def track_wrist_movement(self, cropped_image: np.ndarray) -> None:
         """
@@ -498,7 +498,7 @@ class GestureRecognitionSystem:
         Annotates the given frame with relevant information such as the
         current gesture stage and distance.
         """
-        annotation = f"S{self.stage} D{self.dist_virtual_point:.3f}"
+        annotation = f"S{self.stage} D{self.dist_point:.3f}"
         if self.mode == 'D':
             annotation += f" N{self.num_gest + 1}: {self.y_val[self.num_gest]}"
         cv2.putText(frame, annotation, (25, 25), cv2.FONT_HERSHEY_SIMPLEX, 1,

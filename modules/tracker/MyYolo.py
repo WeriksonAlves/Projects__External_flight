@@ -4,7 +4,7 @@ from ..interfaces import TrackerInterface
 from collections import defaultdict
 from ultralytics import YOLO
 from ultralytics.engine.results import Results
-from typing import Tuple, List, Optional
+from typing import Tuple, List
 
 
 def ensure_valid_frame(func):

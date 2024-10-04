@@ -54,13 +54,9 @@ class KNN(ClassifierInterface):
         if not isinstance(reduced_data, np.ndarray):
             raise ValueError("reduced_data must be a numpy array")
 
-        # Reshape and flatten input data for prediction
         reduced_data = reduced_data.flatten().reshape(1, -1)
-
-        # Predict probabilities for the input sample
         probabilities = self.neigh.predict_proba(reduced_data)
 
-        # Return predicted label if max probability exceeds threshold
         if np.max(probabilities) > prob_min:
             return self.neigh.predict(reduced_data)[0]
         return 'Z'
