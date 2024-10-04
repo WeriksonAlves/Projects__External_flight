@@ -28,15 +28,17 @@ class GestureRecognitionSystem:
     dataset collection modes.
     """
 
-    def __init__(self,
-                 base_dir: str,
-                 configs: InitializeConfig,
-                 operation_mode: Union[ModeDataset, ModeValidate, ModeRealTime],
-                 tracker_model: TrackerInterface,
-                 hand_extractor_model: ExtractorInterface,
-                 body_extractor_model: ExtractorInterface,
-                 classifier: Optional[ClassifierInterface] = None,
-                 sps: Optional[ServoPositionSystem] = None) -> None:
+    def __init__(
+        self,
+        base_dir: str,
+        configs: InitializeConfig,
+        operation_mode: Union[ModeDataset, ModeValidate, ModeRealTime],
+        tracker_model: TrackerInterface,
+        hand_extractor_model: ExtractorInterface,
+        body_extractor_model: ExtractorInterface,
+        classifier: Optional[ClassifierInterface] = None,
+        sps: Optional[ServoPositionSystem] = None
+    ) -> None:
         """
         Initialize the GestureRecognitionSystem.
 
@@ -131,15 +133,12 @@ class GestureRecognitionSystem:
             self.stage = 0
             self.num_gest = 0
             self.dist_point = 1.0
-            self.sc_pitch = 0.0
-            self.sc_yaw = 0.0
             self.hand_results = None
-            self.pose_results = None
+            self.body_results = None
             self.y_val = None
             self.frame_captured = None
-            self.center_person = False
-            self.loop = False  # Set to True to start the main loop
-            self.y_predict = []
+            self.loop = False
+            self.predictions = []
             self.time_classifier = []
 
             # Initialize hand and pose storage
@@ -154,7 +153,7 @@ class GestureRecognitionSystem:
         """
         Initializes storage variables for hand and pose data.
         """
-        self.hand_history, self.wrists_history, self.sample = MyDataHandler.initialize_data(
+        self.hand_history, self.body_history, self.sample = MyDataHandler.initialize_data(
             dist=self.dist,
             length=self.length
         )
@@ -285,9 +284,10 @@ class GestureRecognitionSystem:
         x_train, y_train, x_val, self.y_val = MyDataHandler.load_database(
             self.base_dir, self.files_name, self.proportion)
         self.classifier.fit(x_train, y_train)
-        self.y_predict, self.time_classifier = self.classifier.validate(x_val)
+        self.predictions, self.time_classifier = self.classifier.validate(
+            x_val)
         self.target_names, _ = MyDataHandler.initialize_database(self.database)
-        MyDataHandler.save_results(self.y_val.tolist(), self.y_predict,
+        MyDataHandler.save_results(self.y_val.tolist(), self.predictions,
                                    self.time_classifier, self.target_names,
                                    os.path.join(self.base_dir,
                                                 self.file_name_val))
@@ -396,9 +396,8 @@ class GestureRecognitionSystem:
         """
         self.hand_history = np.concatenate((self.hand_history,
                                             [self.hand_history[-1]]), axis=0)
-        self.wrists_history = np.concatenate((self.wrists_history,
-                                              [self.wrists_history[-1]]),
-                                             axis=0)
+        self.body_history = np.concatenate((self.body_history,
+                                            [self.body_history[-1]]), axis=0)
 
     def track_hand_gesture(self, cropped_image: np.ndarray) -> None:
         """
@@ -406,9 +405,12 @@ class GestureRecognitionSystem:
         Checks for gesture activation based on proximity.
         """
         try:
-            self.hand_results = self.hand_extractor.find_features(cropped_image)
-            frame_results = self.hand_extractor.draw_features(cropped_image,
-                                                            self.hand_results)
+            self.hand_results = self.hand_extractor.find_features(
+                cropped_image
+            )
+            frame_results = self.hand_extractor.draw_features(
+                cropped_image, self.hand_results
+            )
             self._annotate_image(frame_results)
 
             hand_ref = self.hand_extractor.calculate_reference_pose(
@@ -470,24 +472,27 @@ class GestureRecognitionSystem:
         Updates the wrist history with the new data.
         """
         try:
-            self.pose_results = self.body_extractor.find_features(cropped_image)
-            frame_results = self.body_extractor.draw_features(cropped_image,
-                                                            self.pose_results)
+            self.body_results = self.body_extractor.find_features(
+                cropped_image
+            )
+            frame_results = self.body_extractor.draw_features(
+                cropped_image, self.body_results
+            )
             self._annotate_image(frame_results)
 
             body_ref = self.body_extractor.calculate_reference_pose(
-                self.pose_results,
+                self.body_results,
                 self.sample['joints_tracked_reference'],
                 self.sample['joints_tracked'],
                 3
             )
             body_pose = self.body_extractor.calculate_pose(
-                self.pose_results,
+                self.body_results,
                 self.sample['joints_tracked']
             )
             body_center = np.array([body_pose.flatten() - body_ref])
-            self.wrists_history = np.concatenate(
-                (self.wrists_history, body_center),
+            self.body_history = np.concatenate(
+                (self.body_history, body_center),
                 axis=0
             )
         except Exception:
@@ -511,9 +516,9 @@ class GestureRecognitionSystem:
         Reduces the dimensionality of the wrist history matrix.
         Applies necessary filters and performs dimensionality reduction.
         """
-        self.wrists_history = self.wrists_history[1:]  # Remove zero line
-        self.sample['data_reduce_dim'] = np.dot(self.wrists_history.T,
-                                                self.wrists_history)
+        self.body_history = self.body_history[1:]  # Remove zero line
+        self.sample['data_reduce_dim'] = np.dot(self.body_history.T,
+                                                self.body_history)
 
     # @MyTimer.timing_decorator()
     def update_database(self) -> None:
@@ -521,7 +526,7 @@ class GestureRecognitionSystem:
         Updates the database with the current gesture data and resets sample
         data.
         """
-        self.sample['data_pose_track'] = self.wrists_history
+        self.sample['data_pose_track'] = self.body_history
         self.sample['answer_predict'] = self.y_val[self.num_gest]
 
         self.__append_to_database()
@@ -560,7 +565,7 @@ class GestureRecognitionSystem:
         predicted_class = self.classifier.predict(
             self.sample['data_reduce_dim']
         )
-        self.y_predict.append(predicted_class)
+        self.predictions.append(predicted_class)
 
         classification_time = MyTimer.elapsed_time(self.t_classifier)
         self.time_classifier.append(classification_time)
