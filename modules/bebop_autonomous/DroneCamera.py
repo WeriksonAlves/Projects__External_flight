@@ -181,7 +181,7 @@ class DroneCamera:
         :return: bool: True if the camera is operational, False otherwise.
         """
         return self.success_flags["isOpened"]
-    
+
     def release(self) -> None:
         """
         Simulate the behavior of OpenCV's release() method, which would

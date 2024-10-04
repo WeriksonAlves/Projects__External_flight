@@ -43,9 +43,9 @@ class BebopROS:
             self.camera = DroneCamera(self.file_path)
             self._initialize_camera_communication()
             self.camera.success_flags["isOpened"] = True
-            logger.info("Camera successfully initialized and opened.")
+            rospy.loginfo("Camera successfully initialized and opened.")
         except Exception as e:
-            logger.error(f"Error during VideoCapture initialization: {e}")
+            rospy.logerr(f"Error during VideoCapture initialization: {e}")
             if self.camera:
                 self.camera.success_flags["isOpened"] = False
         return self.camera.success_flags.get("isOpened", False)
@@ -59,8 +59,8 @@ class BebopROS:
         subscribers = ['compressed']
         self.camera.initialize_publishers(publishers)
         self.camera.initialize_subscribers(subscribers)
-        logger.info(f"Initialized publishers: {publishers}")
-        logger.info(f"Initialized subscribers: {subscribers}")
+        rospy.loginfo(f"Initialized publishers: {publishers}")
+        rospy.loginfo(f"Initialized subscribers: {subscribers}")
 
     def close_camera(self) -> None:
         """
@@ -68,4 +68,4 @@ class BebopROS:
         """
         if self.camera:
             self.camera.close()
-            logger.info("Camera closed successfully.")
+            rospy.loginfo("Camera closed successfully.")
