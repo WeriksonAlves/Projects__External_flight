@@ -54,8 +54,8 @@ class GestureRecognitionSystem:
         self.configs = configs
         self.operation_mode = operation_mode
         self.tracker = tracking_model
-        self.feature_hand = feature_hand
-        self.feature_pose = feature_pose
+        self.hand_extractor = feature_hand
+        self.body_extractor = feature_pose
         self.classifier = classifier
         self.sps = sps
 
@@ -406,17 +406,17 @@ class GestureRecognitionSystem:
         Checks for gesture activation based on proximity.
         """
         try:
-            self.hand_results = self.feature_hand.find_features(cropped_image)
-            frame_results = self.feature_hand.draw_features(cropped_image,
+            self.hand_results = self.hand_extractor.find_features(cropped_image)
+            frame_results = self.hand_extractor.draw_features(cropped_image,
                                                             self.hand_results)
             self._annotate_image(frame_results)
 
-            hand_ref = self.feature_hand.calculate_reference_pose(
+            hand_ref = self.hand_extractor.calculate_reference_pose(
                 self.hand_results,
                 self.sample['joints_trigger_reference'],
                 self.sample['joints_trigger']
             )
-            hand_pose = self.feature_hand.calculate_pose(
+            hand_pose = self.hand_extractor.calculate_pose(
                 self.hand_results,
                 self.sample['joints_trigger']
             )
@@ -470,18 +470,18 @@ class GestureRecognitionSystem:
         Updates the wrist history with the new data.
         """
         try:
-            self.pose_results = self.feature_pose.find_features(cropped_image)
-            frame_results = self.feature_pose.draw_features(cropped_image,
+            self.pose_results = self.body_extractor.find_features(cropped_image)
+            frame_results = self.body_extractor.draw_features(cropped_image,
                                                             self.pose_results)
             self._annotate_image(frame_results)
 
-            body_ref = self.feature_pose.calculate_reference_pose(
+            body_ref = self.body_extractor.calculate_reference_pose(
                 self.pose_results,
                 self.sample['joints_tracked_reference'],
                 self.sample['joints_tracked'],
                 3
             )
-            body_pose = self.feature_pose.calculate_pose(
+            body_pose = self.body_extractor.calculate_pose(
                 self.pose_results,
                 self.sample['joints_tracked']
             )
