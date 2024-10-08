@@ -58,7 +58,7 @@ class BebopROS:
         publishers = ['camera_control', 'snapshot', 'set_exposure']
         subscribers = ['compressed']
         self.camera._init_publishers(publishers)
-        self.camera.initialize_subscribers(subscribers)
+        self.camera._init_subscribers(subscribers)
         rospy.loginfo(f"Initialized publishers: {publishers}")
         rospy.loginfo(f"Initialized subscribers: {subscribers}")
 

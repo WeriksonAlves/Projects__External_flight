@@ -78,18 +78,37 @@ class DroneCamera:
                     '/bebop/set_exposure', Float32, queue_size=10
                 )
 
-    def initialize_subscribers(self, topics: List[str] = ['image', 'compressed', 'depth', 'theora']):
-        """
-        Initialize subscribers for image and camera orientation topics.
-        
-        :param topics: A list of topics to initialize subscriber for
-        """
-        if 'image' in topics: rospy.Subscriber("/bebop/image_raw", Image, self._process_raw_image)
-        if 'compressed' in topics: rospy.Subscriber("/bebop/image_raw/compressed", CompressedImage, self._process_compressed_image)
-        if 'depth' in topics: rospy.Subscriber("/bebop/image_raw/compressedDepth", CompressedImage, self._process_compressed_depth_image)
-        if 'theora' in topics: rospy.Subscriber("/bebop/image_raw/theora", CompressedImage, self._process_theora_image)
-
-        rospy.Subscriber("/bebop/states/ardrone3/CameraState/Orientation", Ardrone3CameraStateOrientation, self._process_camera_orientation)
+    def _init_subscribers(self, topics: List[str]):
+        """Initialize subscribers for the given ROS topics."""
+        topic_map = {
+            'image': ("/bebop/image_raw", Image, self._process_raw_image),
+            'compressed': ("/bebop/image_raw/compressed",
+                           CompressedImage,
+                           self._process_compressed_image
+                           ),
+            'depth': ("/bebop/image_raw/compressedDepth",
+                      CompressedImage,
+                      self._process_compressed_depth_image
+                      ),
+            'theora': ("/bebop/image_raw/theora",
+                       CompressedImage,
+                       self._process_theora_image
+                       )
+        }
+        for topic in topics:
+            if topic in topic_map:
+                topic_name, msg_type, callback = topic_map[topic]
+                self.subs[topic] = rospy.Subscriber(
+                    topic_name,
+                    msg_type,
+                    callback
+                )
+        # Separate camera orientation subscriber
+        self.subs['camera_orientation'] = rospy.Subscriber(
+            "/bebop/states/ardrone3/CameraState/Orientation",
+            Ardrone3CameraStateOrientation,
+            self._process_camera_orientation
+        )
 
     def _process_raw_image(self, data: Image) -> None:
         """Process and save raw image data."""
