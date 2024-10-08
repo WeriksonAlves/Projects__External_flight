@@ -1,18 +1,30 @@
-import rospy
 from bebop_msgs.msg import Ardrone3CameraStateOrientation
 from cv_bridge import CvBridge
 from dynamic_reconfigure.msg import ConfigDescription, Config
+from functools import wraps
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image, CompressedImage
 from std_msgs.msg import Empty, Float32
 from typing import List, Optional, Tuple
 
 import cv2
-import os
 import numpy as np
+import os
+import rospy
 
 
-class DroneCamera:
+def ensure_directory_exists(method):
+    """Decorator to ensure the image directory exists before proceeding."""
+    @wraps(method)
+    def wrapper(self, *args, **kwargs):
+        if not os.path.exists(self.file_path):
+            os.makedirs(self.file_path)
+            rospy.loginfo(f"Created directory: {self.file_path}")
+        return method(self, *args, **kwargs)
+    return wrapper
+
+
+class DroneCamera():
     """
     DroneCamera handles camera operations, including capturing images,
     managing camera orientation, and controlling exposure settings via ROS
@@ -26,7 +38,36 @@ class DroneCamera:
 
         :param file_path: Path to save captured images.
         """
+        self.drone_type = 'bebop2'
         self.file_path = file_path
+        self.camera_initialized = False  # Flag to indicate camera status
+
+    @ensure_directory_exists
+    def VideoCapture(self) -> bool:
+        """
+        Initializes the drone camera, sets up publishers and subscribers,
+        and marks the camera as opened if successful.
+
+        Returns:
+            bool: True if the camera was successfully opened, False otherwise.
+        """
+        try:
+            self._init_system(self.file_path)
+            self.init_camera_communication()
+            self.success_flags["isOpened"] = True
+            rospy.loginfo("Camera successfully initialized and opened.")
+        except Exception as e:
+            rospy.logerr(f"Error during VideoCapture initialization: {e}")
+            self.success_flags["isOpened"] = False
+        return self.success_flags.get("isOpened", False)
+
+    def _init_system(self, file_path: str):
+        """
+        Initialize the DroneCamera class with publishers, subscribers, and
+        image handling.
+
+        :param file_path: Path to save captured images.
+        """
         self.image_data = {"image": None, "image_compressed": None,
                            "image_compressed_depth": None,
                            "image_theora": None}
@@ -40,6 +81,29 @@ class DroneCamera:
 
         self.pubs = {}
         self.subs = {}
+
+    def init_camera_communication(self) -> None:
+        """
+        Sets up the necessary publishers and subscribers for drone
+        communication.
+        """
+        publishers = ['camera_control', 'snapshot', 'set_exposure']
+        subscribers = ['compressed', 'compressed_description',
+                       'compressed_update']
+        self.init_publishers(publishers)
+        self.init_subscribers(subscribers)
+        rospy.loginfo(f"Initialized publishers: {publishers}")
+        rospy.loginfo(f"Initialized subscribers: {subscribers}")
+        self.camera_initialized = True
+
+    def close_camera(self) -> None:
+        """
+        Safely closes the camera and cleans up resources.
+        """
+        if self.camera_initialized:
+            self.release()  # Reset internal state and stop any processes
+            rospy.loginfo("Camera resources released.")
+            self.camera_initialized = False
 
     def init_publishers(self, topics: List[str]) -> None:
         """Initialize publishers for the given ROS topics."""

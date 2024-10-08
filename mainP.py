@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 import os
 import rospy
-from std_msgs.msg import Int32
 from modules import (
     ModeFactory,
-    ServoPositionSystem,
     BebopROS,
     GestureRecognitionSystem,
     MyCamera,
@@ -38,14 +36,6 @@ DATABASE_FILES = [
 NAME_VAL = "val99"
 
 
-def init_bebop(flag: bool):
-    """Initialize the Bebop2 drone."""
-    if flag:
-        return BebopROS()
-    else:
-        return None
-
-
 def initialize_modes(mode: int):
     """Initialize operation modes for gesture recognition."""
     database_empty = {'F': [], 'I': [], 'L': [], 'P': [], 'T': []}
@@ -74,24 +64,7 @@ def initialize_modes(mode: int):
     return operation_mode
 
 
-def initialize_servo_system(num_servos):
-    """Initialize the Servo Position System."""
-    if num_servos != 0:
-        dir_rot = 1  # Direction of rotation
-        pub_hor_rot = rospy.Publisher(
-            '/EspSystem/horizontal', Int32, queue_size=10
-        )
-        pub_ver_rot = rospy.Publisher(
-            '/EspSystem/vertical', Int32, queue_size=10
-        )
-        return ServoPositionSystem(
-            num_servos, pub_hor_rot, pub_ver_rot, dir_rot
-        )
-    else:
-        return None
-
-
-def create_gesture_recognition_system(camera, operation_mode, sps):
+def create_gesture_recognition_system(camera, operation_mode):
     """Create the Gesture Recognition System."""
     return GestureRecognitionSystem(
         base_dir=os.path.dirname(__file__),  # Get the current folder
@@ -125,7 +98,6 @@ def create_gesture_recognition_system(camera, operation_mode, sps):
                 weights='uniform'
             )
         ) if hasattr(operation_mode, 'k') else None,
-        sps=sps
     )
 
 
@@ -144,21 +116,14 @@ def main():
     rospy.init_node('External_Flight', anonymous=True)
 
     # Initialize the Bebop2 drone
-    bebop = init_bebop(True)
-
-    # Initialize the camera to be used
-    camera = initialize_camera('bebop')
+    bebop = BebopROS()
 
     # Initialize Gesture Recognition System
     operation_mode = initialize_modes(3)
 
-    # Initialize the Servo Position System
-    num_servos = 0  # Adjust the number of servos if necessary
-    sps = initialize_servo_system(num_servos)
-
     # Create and run the gesture recognition system
-    gesture_system = create_gesture_recognition_system(camera, operation_mode,
-                                                       sps)
+    gesture_system = create_gesture_recognition_system(bebop.camera,
+                                                       operation_mode)
     try:
         gesture_system.run()
     finally:
