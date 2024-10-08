@@ -54,6 +54,7 @@ class DroneCamera:
         self.pubs = {}
         self.subs = {}
 
+    @log_decorator
     def init_publishers(self, topics: List[str]):
         """Initialize publishers for the given ROS topics."""
         for topic in topics:
@@ -67,6 +68,7 @@ class DroneCamera:
                 self.pubs['set_exposure'] = rospy.Publisher(
                     '/bebop/set_exposure', Float32, queue_size=10)
 
+    @log_decorator
     def init_subscribers(self, topics: List[str]):
         """Initialize subscribers for the given ROS topics."""
         topic_map = {
@@ -93,30 +95,25 @@ class DroneCamera:
             self._process_camera_orientation
         )
 
-    # @log_decorator
     def _process_raw_image(self, data: Image) -> None:
         """Process and save raw image data."""
         self.__save_and_load_image(data, "image_raw.png", "image",
                                    use_cv_bridge=True)
 
-    # @log_decorator
     def _process_compressed_image(self, data: CompressedImage) -> None:
         """Process and save compressed image data."""
         self.__save_and_load_image(data, "image_compressed.png",
                                    "image_compressed")
 
-    # @log_decorator
     def _process_compressed_depth_image(self, data: CompressedImage) -> None:
         """Process and save compressed depth image data."""
         self.__save_and_load_image(data, "image_compressed_depth.png",
                                    "image_compressed_depth")
 
-    # @log_decorator
     def _process_theora_image(self, data: CompressedImage) -> None:
         """Process and save Theora-encoded image data."""
         self.__save_and_load_image(data, "image_theora.png", "image_theora")
 
-    @log_decorator
     def __save_and_load_image(self, data: CompressedImage, filename: str,
                               img_type: str, use_cv_bridge=False) -> None:
         """Save the image data to a file and load it."""
@@ -128,12 +125,21 @@ class DroneCamera:
 
             # Save and load the image, update success flags
             img_path = os.path.join(self.file_path, filename)
-            self.success_flags[img_type] = self._save_image(image, img_path)
-            self.image_data[img_type] = self._load_image(img_path)
+            self.success_flags[img_type] = self.__save_image(image, img_path)
+            self.image_data[img_type] = self.__load_image(img_path)
         except (cv2.error, ValueError) as e:
             rospy.logerr(f"Failed to process {img_type} image: {e}")
 
-    # @log_decorator
+    def __save_image(self, image: np.ndarray, filename: str) -> bool:
+        """Save an image to disk."""
+        if image is not None:
+            return cv2.imwrite(filename, image)
+        return False
+
+    def __load_image(self, filename: str) -> Optional[np.ndarray]:
+        """Load an image from a file."""
+        return cv2.imread(filename)
+
     def _process_camera_orientation(self, data: Ardrone3CameraStateOrientation
                                     ) -> None:
         """Process camera orientation changes."""
@@ -159,8 +165,9 @@ class DroneCamera:
     @log_decorator
     def take_snapshot(self) -> None:
         """Command the drone to take a snapshot."""
-        self.snapshot_pub.publish(Empty())
+        self.pubs['snapshot'].publish(Empty())
 
+    @log_decorator
     def set_exposure(self, exposure_value: float) -> None:
         """
         Set the camera's exposure value.
@@ -169,24 +176,12 @@ class DroneCamera:
         """
         try:
             exposure_msg = Float32(data=exposure_value)
-            self.set_exposure_pub.publish(exposure_msg)
-            rospy.loginfo(f"Exposure set to {exposure_value}")
-        except Exception as e:
+            self.pubs['set_exposure'].publish(exposure_msg)
+        except rospy.ROSException as e:
             rospy.logerr(f"Failed to set exposure: {e}")
 
-    def _save_image(self, image: np.ndarray, filename: str) -> bool:
-        """Save an image to disk."""
-        if image is not None:
-            cv2.imwrite(filename, image)
-            return True
-        return False
-
-    def _load_image(self, filename: str) -> Optional[np.ndarray]:
-        """Load an image from a file."""
-        return cv2.imread(filename)
-
     def start_camera_stream(self) -> None:
-        """Start the camera stream and keep the node active."""
+        """Start the camera stream and keep the ROS node active."""
         rospy.spin()
 
     def read(self) -> Tuple[bool, Optional[np.ndarray]]:
