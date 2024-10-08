@@ -67,33 +67,24 @@ class DroneCamera:
         for topic in topics:
             if topic == 'camera_control':
                 self.pubs['camera_control'] = rospy.Publisher(
-                    '/bebop/camera_control', Twist, queue_size=10
-                )
+                    '/bebop/camera_control', Twist, queue_size=10)
             elif topic == 'snapshot':
-                self.pubs['snapshot'] = rospy.Publisher(
-                    '/bebop/snapshot', Empty, queue_size=10
-                )
+                self.pubs['snapshot'] = rospy.Publisher('/bebop/snapshot',
+                                                        Empty, queue_size=10)
             elif topic == 'set_exposure':
                 self.pubs['set_exposure'] = rospy.Publisher(
-                    '/bebop/set_exposure', Float32, queue_size=10
-                )
+                    '/bebop/set_exposure', Float32, queue_size=10)
 
     def _init_subscribers(self, topics: List[str]):
         """Initialize subscribers for the given ROS topics."""
         topic_map = {
             'image': ("/bebop/image_raw", Image, self._process_raw_image),
-            'compressed': ("/bebop/image_raw/compressed",
-                           CompressedImage,
-                           self._process_compressed_image
-                           ),
-            'depth': ("/bebop/image_raw/compressedDepth",
-                      CompressedImage,
-                      self._process_compressed_depth_image
-                      ),
-            'theora': ("/bebop/image_raw/theora",
-                       CompressedImage,
-                       self._process_theora_image
-                       )
+            'compressed': ("/bebop/image_raw/compressed", CompressedImage,
+                           self._process_compressed_image),
+            'depth': ("/bebop/image_raw/compressedDepth", CompressedImage,
+                      self._process_compressed_depth_image),
+            'theora': ("/bebop/image_raw/theora", CompressedImage,
+                       self._process_theora_image)
         }
         for topic in topics:
             if topic in topic_map:
@@ -110,20 +101,27 @@ class DroneCamera:
             self._process_camera_orientation
         )
 
+    # @log_decorator
     def _process_raw_image(self, data: Image) -> None:
         """Process and save raw image data."""
-        self._save_and_load_image(data, "image_raw.png", "image", use_cv_bridge=True)
+        self._save_and_load_image(data, "image_raw.png", "image",
+                                  use_cv_bridge=True)
 
+    # @log_decorator
     def _process_compressed_image(self, data: CompressedImage) -> None:
         """Process and save compressed image data."""
-        self._save_and_load_image(data, "image_compressed.png", "image_compressed")
+        self._save_and_load_image(data, "image_compressed.png",
+                                  "image_compressed")
 
+    # @log_decorator
     def _process_compressed_depth_image(self, data: CompressedImage) -> None:
         """Process and save compressed depth image data."""
-        self._save_and_load_image(data, "image_compressed_depth.png", "image_compressed_depth")
+        self._save_and_load_image(data, "image_compressed_depth.png",
+                                  "image_compressed_depth")
 
+    # @log_decorator
     def _process_theora_image(self, data: CompressedImage) -> None:
-        """Process and save Theora encoded image data."""
+        """Process and save Theora-encoded image data."""
         self._save_and_load_image(data, "image_theora.png", "image_theora")
 
     def _save_and_load_image(self, data: CompressedImage, filename: str, img_type: str, use_cv_bridge=False) -> None:
@@ -141,10 +139,16 @@ class DroneCamera:
         except Exception as e:
             rospy.logerr(f"Failed to process {img_type} image: {e}")
 
-    def _process_camera_orientation(self, data: Ardrone3CameraStateOrientation) -> None:
-        """Update the camera orientation state."""
+    # @log_decorator
+    def _process_camera_orientation(self, data: Ardrone3CameraStateOrientation
+                                    ) -> None:
+        """
+        Process camera orientation changes.
+        """
         self.current_tilt = data.tilt
         self.current_pan = data.pan
+        # rospy.loginfo(f"Camera orientation updated: "
+        #               f"Tilt={self.current_tilt}, Pan={self.current_pan}")
 
     def move_camera(self, tilt=0.0, pan=0.0, drone_pitch=0.0, drone_yaw=0.0) -> None:
         """
