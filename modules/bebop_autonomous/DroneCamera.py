@@ -2,27 +2,14 @@ import rospy
 from bebop_msgs.msg import Ardrone3CameraStateOrientation
 from cv_bridge import CvBridge
 from dynamic_reconfigure.msg import ConfigDescription, Config
-from functools import wraps
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image, CompressedImage
 from std_msgs.msg import Empty, Float32
-from typing import Callable, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import cv2
 import os
 import numpy as np
-
-
-# Reusing the log_decorator for logging entry/exit points of functions
-def log_decorator(func: Callable) -> Callable:
-    """Decorator for logging function entry and exit."""
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        rospy.loginfo(f"Entering {func.__name__}")
-        result = func(*args, **kwargs)
-        rospy.loginfo(f"Exiting {func.__name__}")
-        return result
-    return wrapper
 
 
 class DroneCamera:
@@ -54,7 +41,6 @@ class DroneCamera:
         self.pubs = {}
         self.subs = {}
 
-    @log_decorator
     def init_publishers(self, topics: List[str]):
         """Initialize publishers for the given ROS topics."""
         for topic in topics:
@@ -68,7 +54,6 @@ class DroneCamera:
                 self.pubs['set_exposure'] = rospy.Publisher(
                     '/bebop/set_exposure', Float32, queue_size=10)
 
-    @log_decorator
     def init_subscribers(self, topics: List[str]):
         """Initialize subscribers for the given ROS topics."""
         topic_map = {
@@ -146,7 +131,6 @@ class DroneCamera:
         self.current_tilt = data.tilt
         self.current_pan = data.pan
 
-    @log_decorator
     def move_camera(self, tilt=0.0, pan=0.0, drone_pitch=0.0, drone_yaw=0.0
                     ) -> None:
         """
@@ -162,12 +146,10 @@ class DroneCamera:
         camera_control_msg.angular.z = pan - drone_yaw
         self.pubs['camera_control'].publish(camera_control_msg)
 
-    @log_decorator
     def take_snapshot(self) -> None:
         """Command the drone to take a snapshot."""
         self.pubs['snapshot'].publish(Empty())
 
-    @log_decorator
     def set_exposure(self, exposure_value: float) -> None:
         """
         Set the camera's exposure value.
@@ -186,10 +168,11 @@ class DroneCamera:
 
     def read(self) -> Tuple[bool, Optional[np.ndarray]]:
         """
-        Simulate the behavior of OpenCV's read() method, returning the latest available image.
+        Simulate the behavior of OpenCV's read() method, returning the latest
+        available image.
 
-        :return: (bool, np.ndarray): A tuple where the first element is a boolean indicating if an image was successfully read, 
-                                      and the second element is the image array (if available).
+        :return: (bool, np.ndarray): A tuple indicating if an image was
+        successfully read, and the image itself.
         """
         for img_type, img_data in self.image_data.items():
             if img_data is not None:
@@ -200,18 +183,16 @@ class DroneCamera:
         """
         Check if the ROS image topics are publishing or if the camera is
         active.
+
         :return: bool: True if the camera is operational, False otherwise.
         """
         return self.success_flags["isOpened"]
 
     def release(self) -> None:
         """
-        Simulate the behavior of OpenCV's release() method, which would
-        release the camera.
-        Here, it resets the internal state indicating the camera is no longer
-        active.
+        Simulate the behavior of OpenCV's release() method, resetting the
+        camera's internal state.
         """
-        rospy.loginfo("Releasing camera resources")
         self.success_flags = {key: False for key in self.success_flags}
         self.image_data = {key: None for key in self.image_data}
 
@@ -280,7 +261,6 @@ class ParameterListener:
             self._callback_param_update
         )
 
-    @log_decorator
     def _callback_param_desc(self, data: ConfigDescription) -> None:
         """
         Callback for parameter descriptions. Logs the parameter groups and
@@ -293,7 +273,6 @@ class ParameterListener:
                     f"  Parameter: {param.name}, Type: {param.type}"
                 )
 
-    @log_decorator
     def _callback_param_update(self, data: Config) -> None:
         """
         Callback for parameter updates. Processes updated parameter values and
@@ -309,7 +288,6 @@ class ParameterListener:
             if param.name == "compression_quality":
                 self._update_compression_quality(param.value)
 
-    @log_decorator
     def _update_compression_quality(self, value: float) -> None:
         """
         Updates the compression quality of the drone camera.
