@@ -1,5 +1,8 @@
-#!/usr/bin/env python
 import rospy
+from typing import Callable
+from dynamic_reconfigure.msg import ConfigDescription, Config
+from functools import wraps
+
 import cv2
 import os
 import numpy as np
@@ -8,7 +11,7 @@ from sensor_msgs.msg import Image, CompressedImage
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Empty, Float32
 from bebop_msgs.msg import Ardrone3CameraStateOrientation
-from dynamic_reconfigure.msg import Config, ConfigDescription
+# from dynamic_reconfigure.msg import Config, ConfigDescription
 from typing import List, Optional, Tuple
 
 
@@ -235,27 +238,75 @@ class DroneCamera:
         return sc_pitch, sc_yaw
 
 
+def log_decorator(func: Callable) -> Callable:
+    """
+    Decorator for logging function entry, exit, and execution time.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        rospy.loginfo(f"Entering {func.__name__}...")
+        result = func(*args, **kwargs)
+        rospy.loginfo(f"Exiting {func.__name__}...")
+        return result
+    return wrapper
+
+
 class ParameterListener:
     """
-    Listens to parameter updates for dynamic reconfiguration of camera parameters.
+    Listens to parameter updates for dynamic reconfiguration of camera
+    parameters.
     """
 
     def __init__(self, drone_camera: DroneCamera) -> None:
+        """
+        Initializes the listener and sets up ROS subscribers for parameter
+        updates.
+        """
         self.drone_camera = drone_camera
-        rospy.Subscriber("/bebop/image_raw/compressed/parameter_descriptions", ConfigDescription, self._callback_param_desc)
-        rospy.Subscriber("/bebop/image_raw/compressed/parameter_updates", Config, self._callback_param_update)
+        rospy.Subscriber(
+            "/bebop/image_raw/compressed/parameter_descriptions",
+            ConfigDescription,
+            self._callback_param_desc
+        )
+        rospy.Subscriber(
+            "/bebop/image_raw/compressed/parameter_updates",
+            Config,
+            self._callback_param_update
+        )
 
+    @log_decorator
     def _callback_param_desc(self, data: ConfigDescription) -> None:
-        """Log the parameter description data."""
+        """
+        Callback for parameter descriptions. Logs the parameter groups and
+        their respective details. Optimized by reducing redundant logs.
+        """
         for group in data.groups:
             rospy.loginfo(f"Parameter group: {group.name}")
             for param in group.parameters:
-                rospy.loginfo(f"  Parameter: {param.name}, Type: {param.type}")
+                rospy.logdebug(
+                    f"  Parameter: {param.name}, Type: {param.type}"
+                )
 
+    @log_decorator
     def _callback_param_update(self, data: Config) -> None:
-        """Process parameter updates and adjust internal parameters."""
-        for param in data.doubles:
-            rospy.loginfo(f"Update - Parameter: {param.name}, Value: {param.value}")
+        """
+        Callback for parameter updates. Processes updated parameter values and
+        updates camera settings.
+        """
+        self._update_parameters(data.doubles)
+
+    def _update_parameters(self, parameters: list) -> None:
+        """
+        Updates camera settings based on received parameter updates.
+        """
+        for param in parameters:
             if param.name == "compression_quality":
-                rospy.loginfo(f"Changing compression quality to {param.value}")
-                self.drone_camera.compression_quality = param.value
+                self._update_compression_quality(param.value)
+
+    @log_decorator
+    def _update_compression_quality(self, value: float) -> None:
+        """
+        Updates the compression quality of the drone camera.
+        """
+        rospy.loginfo(f"Updating compression quality to {value}")
+        self.drone_camera.compression_quality = value
