@@ -56,7 +56,8 @@ class BebopROS:
         communication.
         """
         publishers = ['camera_control', 'snapshot', 'set_exposure']
-        subscribers = ['compressed']
+        subscribers = ['compressed', 'compressed_description',
+                       'compressed_update']
         self.camera.init_publishers(publishers)
         self.camera.init_subscribers(subscribers)
         rospy.loginfo(f"Initialized publishers: {publishers}")

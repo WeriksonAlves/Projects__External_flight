@@ -41,7 +41,7 @@ class DroneCamera:
         self.pubs = {}
         self.subs = {}
 
-    def init_publishers(self, topics: List[str]):
+    def init_publishers(self, topics: List[str]) -> None:
         """Initialize publishers for the given ROS topics."""
         for topic in topics:
             if topic == 'camera_control':
@@ -54,7 +54,7 @@ class DroneCamera:
                 self.pubs['set_exposure'] = rospy.Publisher(
                     '/bebop/set_exposure', Float32, queue_size=10)
 
-    def init_subscribers(self, topics: List[str]):
+    def init_subscribers(self, topics: List[str]) -> None:
         """Initialize subscribers for the given ROS topics."""
         topic_map = {
             'image': ("/bebop/image_raw", Image, self._process_raw_image),
@@ -79,6 +79,8 @@ class DroneCamera:
             Ardrone3CameraStateOrientation,
             self._process_camera_orientation
         )
+        # Enable parameter listener for dynamic reconfiguration
+        self.param_listener.init_subscribers(topics)
 
     def _process_raw_image(self, data: Image) -> None:
         """Process and save raw image data."""
@@ -255,16 +257,24 @@ class ParameterListener:
         updates.
         """
         self.drone_camera = drone_camera
-        rospy.Subscriber(
-            "/bebop/image_raw/compressed/parameter_descriptions",
-            ConfigDescription,
-            self._callback_param_desc
-        )
-        rospy.Subscriber(
-            "/bebop/image_raw/compressed/parameter_updates",
-            Config,
-            self._callback_param_update
-        )
+        self.subs = {}
+
+    def init_subscribers(self, topics: List[str]) -> None:
+        """Initialize subscribers for the given ROS topics."""
+        topic_map = {
+            'compressed_description': (
+                "/bebop/image_raw/compressed/parameter_descriptions",
+                ConfigDescription, self._callback_param_desc),
+            'compressed_update': (
+                "/bebop/image_raw/compressed/parameter_updates",
+                Config, self._callback_param_update)
+        }
+        for topic in topics:
+            if topic in topic_map:
+                topic_name, msg_type, callback = topic_map[topic]
+                self.subs[topic] = rospy.Subscriber(topic_name,
+                                                    msg_type,
+                                                    callback)
 
     def _callback_param_desc(self, data: ConfigDescription) -> None:
         """

@@ -38,6 +38,14 @@ DATABASE_FILES = [
 NAME_VAL = "val99"
 
 
+def init_bebop(flag: bool):
+    """Initialize the Bebop2 drone."""
+    if flag:
+        return BebopROS()
+    else:
+        return None
+
+
 def initialize_modes(mode: int):
     """Initialize operation modes for gesture recognition."""
     database_empty = {'F': [], 'I': [], 'L': [], 'P': [], 'T': []}
@@ -133,7 +141,10 @@ def initialize_camera(camera):
 
 def main():
     """Main function to run the Gesture Recognition System."""
-    rospy.init_node('RecognitionSystem', anonymous=True)
+    rospy.init_node('External_Flight', anonymous=True)
+
+    # Initialize the Bebop2 drone
+    bebop = init_bebop(True)
 
     # Initialize the camera to be used
     camera = initialize_camera('bebop')

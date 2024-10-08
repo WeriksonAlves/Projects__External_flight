@@ -6,6 +6,7 @@ import rospy
 from typing import Optional, Union, Tuple
 from ..auxiliary.MyDataHandler import MyDataHandler
 from ..auxiliary.MyTimer import MyTimer
+from ..bebop_autonomous.BebopROS import BebopROS
 from ..camera.MyCamera import MyCamera
 from ..interfaces.ClassifierInterface import ClassifierInterface
 from ..interfaces.ExtractorInterface import ExtractorInterface
