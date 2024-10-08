@@ -1,72 +1,82 @@
 import rospy
-from typing import Callable
+from bebop_msgs.msg import Ardrone3CameraStateOrientation
+from cv_bridge import CvBridge
 from dynamic_reconfigure.msg import ConfigDescription, Config
 from functools import wraps
+from geometry_msgs.msg import Twist
+from sensor_msgs.msg import Image, CompressedImage
+from std_msgs.msg import Empty, Float32
+from typing import Callable, List
 
 import cv2
 import os
 import numpy as np
-from cv_bridge import CvBridge, CvBridgeError
-from sensor_msgs.msg import Image, CompressedImage
-from geometry_msgs.msg import Twist
-from std_msgs.msg import Empty, Float32
-from bebop_msgs.msg import Ardrone3CameraStateOrientation
+# from cv_bridge import CvBridge, CvBridgeError
+# from sensor_msgs.msg import Image, CompressedImage
+# from geometry_msgs.msg import Twist
+# from std_msgs.msg import Empty, Float32
+# from bebop_msgs.msg import Ardrone3CameraStateOrientation
 # from dynamic_reconfigure.msg import Config, ConfigDescription
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
+
+
+def log_decorator(func: Callable) -> Callable:
+    """
+    Decorator for logging function entry, exit, and execution time.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        rospy.loginfo(f"Entering {func.__name__}...")
+        result = func(*args, **kwargs)
+        rospy.loginfo(f"Exiting {func.__name__}...")
+        return result
+    return wrapper
 
 
 class DroneCamera:
     """
-    DroneCamera class handles camera operations, including capturing images, managing camera orientation,
-    and controlling exposure settings.
-
-    ROS Topics:
-        /bebop/image_raw
-        /bebop/image_raw/compressed
-        /bebop/camera_control
-        /bebop/states/ardrone3/CameraState/Orientation
-        /bebop/set_exposure
-        /bebop/snapshot
+    DroneCamera handles camera operations, including capturing images,
+    managing camera orientation, and controlling exposure settings via ROS
+    topics.
     """
 
     def __init__(self, file_path: str):
         """
-        Initialize the DroneCamera class and set up necessary publishers and subscribers.
+        Initialize the DroneCamera class with publishers, subscribers, and
+        image handling.
 
-        :param file_path: The path to save images.
+        :param file_path: Path to save captured images.
         """
-
         self.file_path = file_path
-        self.image_data = {
-            "image": None,
-            "image_compressed": None,
-            "image_compressed_depth": None,
-            "image_theora": None,
-        }
-
-        self.success_flags = {
-            "image": False,
-            "image_compressed": False,
-            "image_compressed_depth": False,
-            "image_theora": False,
-            "isOpened": False
-        }
-
-        self.current_tilt: float = 0.0
-        self.current_pan: float = 0.0
-
+        self.image_data = {"image": None, "image_compressed": None,
+                           "image_compressed_depth": None,
+                           "image_theora": None}
+        self.success_flags = {"image": False, "image_compressed": False,
+                              "image_compressed_depth": False,
+                              "image_theora": False, "isOpened": False}
+        self.current_tilt = 0.0
+        self.current_pan = 0.0
         self.param_listener = ParameterListener(self)
         self.bridge = CvBridge()
-        
-    def initialize_publishers(self, topics: List[str] = ['camera_control', 'snapshot', 'set_exposure']):
-        """
-        Initialize publishers for camera control, snapshot, and exposure settings.
-        
-        :param topics: A list of topics to initialize publishers for.
-        """
-        if 'camera_control' in topics: self.camera_control_pub = rospy.Publisher('/bebop/camera_control', Twist, queue_size=10)
-        if 'snapshot' in topics: self.snapshot_pub = rospy.Publisher('/bebop/snapshot', Empty, queue_size=10)
-        if 'set_exposure' in topics: self.set_exposure_pub = rospy.Publisher('/bebop/set_exposure', Float32, queue_size=10)
+
+        self.pubs = {}
+        self.subs = {}
+
+    def _init_publishers(self, topics: List[str]):
+        """Initialize publishers for the given ROS topics."""
+        for topic in topics:
+            if topic == 'camera_control':
+                self.pubs['camera_control'] = rospy.Publisher(
+                    '/bebop/camera_control', Twist, queue_size=10
+                )
+            elif topic == 'snapshot':
+                self.pubs['snapshot'] = rospy.Publisher(
+                    '/bebop/snapshot', Empty, queue_size=10
+                )
+            elif topic == 'set_exposure':
+                self.pubs['set_exposure'] = rospy.Publisher(
+                    '/bebop/set_exposure', Float32, queue_size=10
+                )
 
     def initialize_subscribers(self, topics: List[str] = ['image', 'compressed', 'depth', 'theora']):
         """
@@ -236,19 +246,6 @@ class DroneCamera:
         sc_yaw = np.tanh(dist_center_h * Gi[1]) * Ge[1] if np.abs(
             dist_center_h) > 0.25 else 0
         return sc_pitch, sc_yaw
-
-
-def log_decorator(func: Callable) -> Callable:
-    """
-    Decorator for logging function entry, exit, and execution time.
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        rospy.loginfo(f"Entering {func.__name__}...")
-        result = func(*args, **kwargs)
-        rospy.loginfo(f"Exiting {func.__name__}...")
-        return result
-    return wrapper
 
 
 class ParameterListener:

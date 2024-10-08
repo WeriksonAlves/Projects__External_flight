@@ -197,7 +197,6 @@ class GestureRecognitionSystem:
             self.sps.terminate()
         rospy.loginfo("System terminated successfully.")
 
-    @MyTimer.timing_decorator()
     def run(self) -> None:
         """Main execution loop for the gesture recognition system."""
         self._setup_mode()
@@ -218,7 +217,6 @@ class GestureRecognitionSystem:
 
                 self._process_stage()
 
-    @MyTimer.timing_decorator()
     def stop(self) -> None:
         """Stops the gesture recognition system and releases resources."""
         if not self.loop:
