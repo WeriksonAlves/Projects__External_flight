@@ -1,56 +1,86 @@
 from sklearn.neighbors import KNeighborsClassifier
-from ..interfaces.ClassifierInterface import ClassifierInterface
-from ..auxiliary.TimeFunctions import TimeFunctions
-
-
+from typing import List, Tuple
 import numpy as np
+from ..interfaces.ClassifierInterface import ClassifierInterface
+from ..auxiliary.MyTimer import MyTimer
+
 
 class KNN(ClassifierInterface):
+    """
+    KNN Classifier wrapping around sklearn's KNeighborsClassifier,
+    with added timing and custom logic for training, predicting, and
+    validating.
+    """
+
     def __init__(self, initializer: KNeighborsClassifier):
+        """
+        Initialize the KNN classifier with a given KNeighborsClassifier
+        instance.
+
+        :param initializer: Instance of sklearn.neighbors.KNeighborsClassifier.
+        :raises ValueError: If the initializer is not an instance of
+        KNeighborsClassifier.
+        """
+        if not isinstance(initializer, KNeighborsClassifier):
+            raise ValueError(f"Expected KNeighborsClassifier, got "
+                             f"{type(initializer).__name__}")
         self.neigh = initializer
-    
-    @TimeFunctions.run_timer
-    def fit(self, X_train: np.ndarray, Y_train: list) -> None:
+
+    @MyTimer.timing_decorator(use_cv2=True, log_output=False)
+    def fit(self, x_train: np.ndarray, y_train: np.ndarray) -> None:
         """
-        Fit a KNN model using the input training data X_train and corresponding target labels Y_train.
-        
-        Args:
-            X_train (np.ndarray): The input training data.
-            Y_train (list): The corresponding target labels.
-        
-        Returns:
-            None
+        Fit the KNN model using training data.
+
+        :param x_train: Training feature data (numpy array).
+        :param y_train: Corresponding target labels (numpy array).
+        :raises ValueError: If inputs are not numpy arrays.
         """
-        self.neigh.fit(X_train, Y_train)
-    
-    def my_predict(self, reduced_data: np.ndarray, prob_min: float = 0.6) -> str:
+        if not isinstance(x_train, np.ndarray) or not isinstance(y_train,
+                                                                 np.ndarray):
+            raise ValueError("Both X_train and y_train must be numpy arrays.")
+
+        self.neigh.fit(x_train, y_train)
+
+    def predict(self, reduced_data: np.ndarray, prob_min: float = 0.6) -> str:
         """
-        Predict the class label for a given sample based on a minimum probability threshold.
-        
-        Args:
-            reduced_data (np.ndarray): The input sample.
-            prob_min (float): The minimum probability threshold.
-        
-        Returns:
-            str: The predicted class label.
+        Predict the class label for a given input sample based on probability.
+
+        :param reduced_data: Input data sample (numpy array).
+        :param prob_min: Minimum probability threshold for classification.
+        :return: Predicted class label as a string, or 'Z' if below the
+            threshold.
+        :raises ValueError: If input is not a numpy array.
         """
-        reduced_data = np.array(reduced_data).flatten().tolist() 
-        
-        probability = self.neigh.predict_proba(np.array([reduced_data]))
-        if max(probability[0]) > prob_min:
-            Y_predict = self.neigh.predict(np.array([reduced_data]))[0]
-        else:
-            Y_predict = 'Z'
-        return Y_predict
-    
-    @TimeFunctions.run_timer
-    def validate(self, x_val: np.ndarray) -> tuple[list[str], list[float]]:
-        t_func = TimeFunctions()
-        y_predict = []
-        time_classifier = []
-        for i in range(len(x_val)):
-            t_ini = t_func.tic()
-            y_predict.append(self.my_predict(x_val[i]))
-            time_classifier.append(t_func.toc(t_ini))        
-        return y_predict, time_classifier
-            
+        if not isinstance(reduced_data, np.ndarray):
+            raise ValueError("reduced_data must be a numpy array")
+
+        reduced_data = reduced_data.flatten().reshape(1, -1)
+        probabilities = self.neigh.predict_proba(reduced_data)
+
+        if np.max(probabilities) > prob_min:
+            return self.neigh.predict(reduced_data)[0]
+        return 'Z'
+
+    @MyTimer.timing_decorator(use_cv2=True, log_output=False)
+    def validate(self, X_val: np.ndarray) -> Tuple[List[str], List[float]]:
+        """
+        Validate the KNN model on a validation dataset.
+
+        :param X_val: Validation data (numpy array).
+        :return: Tuple of predicted class labels and their corresponding
+            classification times.
+        :raises ValueError: If X_val is not a numpy array.
+        """
+        if not isinstance(X_val, np.ndarray):
+            raise ValueError("X_val must be a numpy array")
+
+        predictions = []
+        classification_times = []
+
+        for sample in X_val:
+            start_time = MyTimer.get_current_time()
+            predictions.append(self.predict(sample))
+            elapsed = MyTimer.elapsed_time(start_time)
+            classification_times.append(elapsed)
+
+        return predictions, classification_times
