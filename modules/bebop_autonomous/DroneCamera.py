@@ -31,14 +31,14 @@ class DroneCamera():
     topics.
     """
 
-    def __init__(self, file_path: str):
+    def __init__(self, file_path: str, drone_type='bebop2'):
         """
         Initialize the DroneCamera class with publishers, subscribers, and
         image handling.
 
         :param file_path: Path to save captured images.
         """
-        self.drone_type = 'bebop2'
+        self.drone_type = drone_type
         self.file_path = file_path
         self.camera_initialized = False  # Flag to indicate camera status
 
