@@ -64,7 +64,7 @@ def initialize_modes(mode: int):
     return operation_mode
 
 
-def create_gesture_recognition_system(camera, operation_mode):
+def create_gesture_recognition_system(camera, operation_mode, bebop):
     """Create the Gesture Recognition System."""
     return GestureRecognitionSystem(
         base_dir=os.path.dirname(__file__),  # Get the current folder
@@ -98,6 +98,7 @@ def create_gesture_recognition_system(camera, operation_mode):
                 weights='uniform'
             )
         ) if hasattr(operation_mode, 'k') else None,
+        bebop=bebop
     )
 
 
@@ -123,7 +124,8 @@ def main():
 
     # Create and run the gesture recognition system
     gesture_system = create_gesture_recognition_system(bebop.camera,
-                                                       operation_mode)
+                                                       operation_mode,
+                                                       bebop)
     try:
         gesture_system.run()
     finally:

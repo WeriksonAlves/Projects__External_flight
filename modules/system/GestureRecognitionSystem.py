@@ -6,12 +6,11 @@ import rospy
 from typing import Optional, Union, Tuple
 from ..auxiliary.MyDataHandler import MyDataHandler
 from ..auxiliary.MyTimer import MyTimer
-from ..bebop_autonomous.BebopROS import BebopROS
+from ..bebop_autonomous.BebopROS import BebopROS as B
 from ..camera.MyCamera import MyCamera
 from ..interfaces.ClassifierInterface import ClassifierInterface
 from ..interfaces.ExtractorInterface import ExtractorInterface
 from ..interfaces.TrackerInterface import TrackerInterface
-from ..servo.ServoPositionSystem import ServoPositionSystem
 from ..system.SystemSettings import (ModeDataset, ModeValidate, ModeRealTime)
 
 
@@ -30,7 +29,7 @@ class GestureRecognitionSystem:
         hand_extractor_model: ExtractorInterface,
         body_extractor_model: ExtractorInterface,
         classifier: Optional[ClassifierInterface] = None,
-        sps: Optional[ServoPositionSystem] = None
+        bebop: Optional[B] = None
     ) -> None:
         """
         Initialize the GestureRecognitionSystem.
@@ -52,7 +51,7 @@ class GestureRecognitionSystem:
         self.hand_extractor = hand_extractor_model
         self.body_extractor = body_extractor_model
         self.classifier = classifier
-        self.sps = sps
+        self.B = bebop
 
         # Initialize system components
         self.__initialize_system()
@@ -204,18 +203,17 @@ class GestureRecognitionSystem:
         t_frame = MyTimer.get_current_time()
         rospy.loginfo("Starting main execution loop.")
         while self.loop:
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                rospy.loginfo("Exit signal received (q pressed).")
+                self.stop()
+
+            if self.mode == 'D' and self.num_gest >= self.max_num_gest:
+                rospy.loginfo("Maximum number of gestures collected.")
+                self.stop()
+
             current_time = MyTimer.get_current_time()
             if MyTimer.elapsed_time(t_frame) > (1 / self.fps):
                 t_frame = current_time
-
-                if cv2.waitKey(1) & 0xFF == ord("q"):
-                    rospy.loginfo("Exit signal received (q pressed).")
-                    self.stop()
-
-                if self.mode == 'D' and self.num_gest >= self.max_num_gest:
-                    rospy.loginfo("Maximum number of gestures collected.")
-                    self.stop()
-
                 self._process_stage()
 
     def stop(self) -> None:
@@ -280,7 +278,7 @@ class GestureRecognitionSystem:
                                    os.path.join(self.base_dir,
                                                 self.file_name_val))
 
-    @MyTimer.timing_decorator()
+    # @MyTimer.timing_decorator()
     def _process_stage(self) -> None:
         """
         Handles different stages of gesture recognition based on the mode.
@@ -334,9 +332,12 @@ class GestureRecognitionSystem:
         """
         try:
             results_people, annotated_frame = self.tracker.detect_people(frame)
-            boxes, track_ids = self.tracker.identify_operator(results_people)
+            bounding_box, track_id = self.tracker.identify_operator(
+                results_people)
             success, cropped_image = self.tracker.crop_operator(
-                boxes, track_ids, annotated_frame, frame)
+                bounding_box, track_id, annotated_frame, frame)
+            if self.B is not None:
+                B.ajust_camera(frame, bounding_box, (0.5, 0.5), (0.5, 0.5))
             return cropped_image if success else None
         except Exception as e:
             rospy.logerr(f"Error during operator detection and tracking: {e}")

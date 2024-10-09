@@ -62,16 +62,20 @@ class MyYolo(TrackerInterface):
         frame.
 
         :param detection_results: List of detection results from the YOLO
-        model.
-        :return: Tuple containing the bounding boxes and the list of tracking
-        IDs.
+            model.
+        :return: Tuple containing the bounding box and tracking ID for the
+            detected person.
         """
         detection_result = detection_results[0].boxes
-        boxes = detection_result.xywh.cpu().numpy(
-                ) if detection_result else np.array([])
-        track_ids = detection_result.id.cpu().numpy().astype(int).tolist(
-                    ) if detection_result else []
-        return boxes, track_ids
+        if detection_result:
+            bounding_boxes = detection_result.xywh.cpu().numpy()
+            track_ids = detection_result.id.cpu().numpy().astype(int).tolist()
+
+            for box, track_id in zip(bounding_boxes, track_ids):
+                x, y, w, h = map(int, box)
+                return np.array([x, y, w, h]), track_id
+        else:
+            return np.array([]), []
 
     def _draw_track_history(self, annotated_frame: np.ndarray, track_id: int,
                             box: np.ndarray, track_length: int) -> None:
@@ -94,15 +98,15 @@ class MyYolo(TrackerInterface):
         cv2.polylines(annotated_frame, [points], isClosed=False,
                       color=(230, 230, 230), thickness=10)
 
-    def crop_operator(self, boxes: np.ndarray, track_ids: List[int],
+    def crop_operator(self, bounding_box: np.ndarray, track_id: int,
                       annotated_frame: np.ndarray, frame: np.ndarray,
                       track_length: int = 90) -> Tuple[bool, np.ndarray]:
         """
         Tracks and highlights the operator in the captured frame, and crops
         the region of interest (ROI) for the operator.
 
-        :param boxes: Array of bounding boxes for detected people.
-        :param track_ids: List of tracking IDs for detected people.
+        :param box: The bounding box for the detected person.
+        :param track_id: The tracking ID of the person.
         :param annotated_frame: The frame with drawn annotations.
         :param frame: The original frame where the operator is to be cropped.
         :param track_length: The number of points to keep in the track history
@@ -110,17 +114,12 @@ class MyYolo(TrackerInterface):
         :return: Cropped operator region of interest or None if no person is
         detected.
         """
-        if not boxes.size:
-            return None  # Fallback if no person is detected
+        if bounding_box.size == 0:
+            return False, None  # Fallback if no person is detected
 
-        for box, track_id in zip(boxes, track_ids):
-            self._draw_track_history(annotated_frame, track_id, box,
-                                     track_length)
-
-            # Crop operator from the frame
-            x, y, w, h = map(int, box)
-            person_roi = frame[max(0, y - h // 2): y + h // 2,
-                               max(0, x - w // 2): x + w // 2]
-            return True, cv2.flip(person_roi, 1)
-
-        return False, None
+        x, y, w, h = map(int, bounding_box)
+        self._draw_track_history(annotated_frame, track_id, bounding_box,
+                                 track_length)
+        person_roi = frame[max(0, y - h // 2): y + h // 2,
+                           max(0, x - w // 2): x + w // 2]
+        return True, cv2.flip(person_roi, 1)
