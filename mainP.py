@@ -102,16 +102,6 @@ def create_gesture_recognition_system(camera, operation_mode, bebop):
     )
 
 
-def initialize_camera(camera):
-    """Initialize the camera to be used."""
-    if camera == 'realsense':
-        return 4
-    elif camera == 'espcam':
-        return "http://192.168.209.199:81/stream"
-    elif camera == 'bebop':
-        return BebopROS()
-
-
 def main():
     """Main function to run the Gesture Recognition System."""
     rospy.init_node('External_Flight', anonymous=True)
@@ -123,7 +113,7 @@ def main():
     operation_mode = initialize_modes(3)
 
     # Create and run the gesture recognition system
-    gesture_system = create_gesture_recognition_system(bebop.camera,
+    gesture_system = create_gesture_recognition_system(bebop,
                                                        operation_mode,
                                                        bebop)
     try:

@@ -337,7 +337,7 @@ class GestureRecognitionSystem:
             success, cropped_image = self.tracker.crop_operator(
                 bounding_box, track_id, annotated_frame, frame)
             if self.B is not None:
-                B.ajust_camera(frame, bounding_box, (0.5, 0.5), (0.5, 0.5))
+                self.B.ajust_camera(frame, bounding_box)
             return cropped_image if success else None
         except Exception as e:
             rospy.logerr(f"Error during operator detection and tracking: {e}")

@@ -1,7 +1,6 @@
 from bebop_msgs.msg import Ardrone3CameraStateOrientation
 from cv_bridge import CvBridge
 from dynamic_reconfigure.msg import ConfigDescription, Config
-from functools import wraps
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Image, CompressedImage
 from std_msgs.msg import Empty, Float32
@@ -13,17 +12,6 @@ import os
 import rospy
 
 
-def ensure_directory_exists(method):
-    """Decorator to ensure the image directory exists before proceeding."""
-    @wraps(method)
-    def wrapper(self, *args, **kwargs):
-        if not os.path.exists(self.file_path):
-            os.makedirs(self.file_path)
-            rospy.loginfo(f"Created directory: {self.file_path}")
-        return method(self, *args, **kwargs)
-    return wrapper
-
-
 class DroneCamera():
     """
     DroneCamera handles camera operations, including capturing images,
@@ -31,49 +19,31 @@ class DroneCamera():
     topics.
     """
 
-    def __init__(self, file_path: str, drone_type='bebop2'):
+    def __init__(self,
+                 file_path: str = os.path.dirname(__file__)):
         """
         Initialize the DroneCamera class with publishers, subscribers, and
         image handling.
 
-        :param file_path: Path to save captured images.
+        Attributes:
+            file_path: Path to save captured images.
+            image_data: Dictionary to store image data.
+            success_flags: Dictionary to track successful image captures.
+            current_tilt: Current vertical camera orientation.
+            current_pan: Current horizontal camera orientation.
+            param_listener: Listener for dynamic reconfiguration.
+            bridge: Bridge for converting ROS messages to OpenCV images.
+            pubs: Dictionary of ROS publishers.
+            subs: Dictionary of ROS subscribers.
         """
-        self.drone_type = drone_type
         self.file_path = file_path
-        self.camera_initialized = False  # Flag to indicate camera status
 
-    @ensure_directory_exists
-    def VideoCapture(self) -> bool:
-        """
-        Initializes the drone camera, sets up publishers and subscribers,
-        and marks the camera as opened if successful.
-
-        Returns:
-            bool: True if the camera was successfully opened, False otherwise.
-        """
-        try:
-            self._init_system(self.file_path)
-            self.init_camera_communication()
-            self.success_flags["isOpened"] = True
-            rospy.loginfo("Camera successfully initialized and opened.")
-        except Exception as e:
-            rospy.logerr(f"Error during VideoCapture initialization: {e}")
-            self.success_flags["isOpened"] = False
-        return self.success_flags.get("isOpened", False)
-
-    def _init_system(self, file_path: str):
-        """
-        Initialize the DroneCamera class with publishers, subscribers, and
-        image handling.
-
-        :param file_path: Path to save captured images.
-        """
-        self.image_data = {"image": None, "image_compressed": None,
-                           "image_compressed_depth": None,
-                           "image_theora": None}
-        self.success_flags = {"image": False, "image_compressed": False,
-                              "image_compressed_depth": False,
-                              "image_theora": False, "isOpened": False}
+        self.image_data = {"image": None, "compressed": None,
+                           "depth": None,
+                           "theora": None}
+        self.success_flags = {"image": False, "compressed": False,
+                              "depth": False,
+                              "theora": False, "isOpened": False}
         self.current_tilt = 0.0
         self.current_pan = 0.0
         self.param_listener = ParameterListener(self)
@@ -82,28 +52,7 @@ class DroneCamera():
         self.pubs = {}
         self.subs = {}
 
-    def init_camera_communication(self) -> None:
-        """
-        Sets up the necessary publishers and subscribers for drone
-        communication.
-        """
-        publishers = ['camera_control', 'snapshot', 'set_exposure']
-        subscribers = ['compressed', 'compressed_description',
-                       'compressed_update']
-        self.init_publishers(publishers)
-        self.init_subscribers(subscribers)
-        rospy.loginfo(f"Initialized publishers: {publishers}")
-        rospy.loginfo(f"Initialized subscribers: {subscribers}")
-        self.camera_initialized = True
-
-    def close_camera(self) -> None:
-        """
-        Safely closes the camera and cleans up resources.
-        """
-        if self.camera_initialized:
-            self.release()  # Reset internal state and stop any processes
-            rospy.loginfo("Camera resources released.")
-            self.camera_initialized = False
+    """Section 1: Initializing the camera topics."""
 
     def init_publishers(self, topics: List[str]) -> None:
         """Initialize publishers for the given ROS topics."""
@@ -153,17 +102,23 @@ class DroneCamera():
 
     def _process_compressed_image(self, data: CompressedImage) -> None:
         """Process and save compressed image data."""
-        self.__save_and_load_image(data, "image_compressed.png",
-                                   "image_compressed")
+        self.__save_and_load_image(data, "compressed.png",
+                                   "compressed")
 
     def _process_compressed_depth_image(self, data: CompressedImage) -> None:
         """Process and save compressed depth image data."""
-        self.__save_and_load_image(data, "image_compressed_depth.png",
-                                   "image_compressed_depth")
+        self.__save_and_load_image(data, "depth.png",
+                                   "depth")
 
     def _process_theora_image(self, data: CompressedImage) -> None:
         """Process and save Theora-encoded image data."""
-        self.__save_and_load_image(data, "image_theora.png", "image_theora")
+        self.__save_and_load_image(data, "theora.png", "theora")
+
+    def _process_camera_orientation(self, data: Ardrone3CameraStateOrientation
+                                    ) -> None:
+        """Process camera orientation changes."""
+        self.current_tilt = data.tilt
+        self.current_pan = data.pan
 
     def __save_and_load_image(self, data: CompressedImage, filename: str,
                               img_type: str, use_cv_bridge=False) -> None:
@@ -191,11 +146,7 @@ class DroneCamera():
         """Load an image from a file."""
         return cv2.imread(filename)
 
-    def _process_camera_orientation(self, data: Ardrone3CameraStateOrientation
-                                    ) -> None:
-        """Process camera orientation changes."""
-        self.current_tilt = data.tilt
-        self.current_pan = data.pan
+    """Section 2: Camera control methods"""
 
     def move_camera(self, tilt=0.0, pan=0.0, drone_pitch=0.0, drone_yaw=0.0
                     ) -> None:
@@ -222,28 +173,10 @@ class DroneCamera():
 
         :param exposure_value: A float value to adjust exposure (-3.0 to 3.0).
         """
-        try:
-            exposure_msg = Float32(data=exposure_value)
-            self.pubs['set_exposure'].publish(exposure_msg)
-        except rospy.ROSException as e:
-            rospy.logerr(f"Failed to set exposure: {e}")
+        exposure_msg = Float32(data=exposure_value)
+        self.pubs['set_exposure'].publish(exposure_msg)
 
-    def start_camera_stream(self) -> None:
-        """Start the camera stream and keep the ROS node active."""
-        rospy.spin()
-
-    def read(self) -> Tuple[bool, Optional[np.ndarray]]:
-        """
-        Simulate the behavior of OpenCV's read() method, returning the latest
-        available image.
-
-        :return: (bool, np.ndarray): A tuple indicating if an image was
-        successfully read, and the image itself.
-        """
-        for img_type, img_data in self.image_data.items():
-            if img_data is not None:
-                return True, img_data
-        return False, None
+    """Section 3: Implementing OpenCV-like methods."""
 
     def isOpened(self) -> bool:
         """
@@ -254,6 +187,19 @@ class DroneCamera():
         """
         return self.success_flags["isOpened"]
 
+    def read(self, subscriber: str = 'compressed'
+             ) -> Tuple[bool, Optional[np.ndarray]]:
+        """
+        Reads the latest image data from the camera.
+
+        :param subscriber: The subscriber to read from.
+        :return: Tuple[bool, Optional[np.ndarray]]: A tuple containing a
+            boolean indicating success and the image data.
+        """
+        if self.success_flags[subscriber]:
+            return True, self.image_data[subscriber]
+        return False, None
+
     def release(self) -> None:
         """
         Simulate the behavior of OpenCV's release() method, resetting the
@@ -261,12 +207,17 @@ class DroneCamera():
         """
         self.success_flags = {key: False for key in self.success_flags}
         self.image_data = {key: None for key in self.image_data}
+        rospy.loginfo("Camera resources released.")
 
 
 class ParameterListener:
     """
     Listens to parameter updates for dynamic reconfiguration of camera
     parameters.
+
+    Attributes:
+        drone_camera: The DroneCamera instance to update.
+        subs: Dictionary of ROS subscribers.
     """
 
     def __init__(self, drone_camera: DroneCamera) -> None:
@@ -311,17 +262,17 @@ class ParameterListener:
         Callback for parameter updates. Processes updated parameter values and
         updates camera settings.
         """
-        self._update_parameters(data.doubles)
+        self.__update_parameters(data.doubles)
 
-    def _update_parameters(self, parameters: list) -> None:
+    def __update_parameters(self, parameters: list) -> None:
         """
         Updates camera settings based on received parameter updates.
         """
         for param in parameters:
             if param.name == "compression_quality":
-                self._update_compression_quality(param.value)
+                self.__update_compression_quality(param.value)
 
-    def _update_compression_quality(self, value: float) -> None:
+    def __update_compression_quality(self, value: float) -> None:
         """
         Updates the compression quality of the drone camera.
         """

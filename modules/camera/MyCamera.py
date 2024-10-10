@@ -1,6 +1,6 @@
 import cv2
 from typing import Union
-from ..bebop_autonomous.BebopROS import DroneCamera
+from ..bebop_autonomous.BebopROS import BebopROS
 
 
 class MyCamera():
@@ -15,14 +15,13 @@ class MyCamera():
     - length: int - Length parameter (if relevant)
     """
     def __init__(
-        self, source: Union[int, str, DroneCamera], fps: int = 5,
+        self, source: Union[int, str, BebopROS], fps: int = 5,
         dist: float = 0.025, length: int = 15
     ) -> None:
         if hasattr(source, 'drone_type'):
-            source.VideoCapture()
-            self.cap = source  # ROS-based camera
+            self.cap = source.VideoCapture()
         else:
-            self.cap = cv2.VideoCapture(source)  # OpenCV-based camera
+            self.cap = cv2.VideoCapture(source)
 
         if not self.cap.isOpened():
             raise RuntimeError("Error: Could not open camera.")
