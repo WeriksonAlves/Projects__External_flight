@@ -108,7 +108,7 @@ def main():
 
     # Initialize the Bebop2 drone
     bebop = BebopROS()
-
+    bebop.simulation = False
     # Initialize Gesture Recognition System
     operation_mode = initialize_modes(3)
 

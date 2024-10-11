@@ -19,10 +19,9 @@ class DroneCamera():
     topics.
     """
 
-    def __init__(self,
-                 file_path: str = os.path.dirname(__file__)):
+    def __init__(self, file_path: str = os.path.dirname(__file__)):
         """
-        Initialize the DroneCamera class with publishers, subscribers, and
+        Initialize the DroneCamera object with publishers, subscribers, and
         image handling.
 
         Attributes:
@@ -38,12 +37,11 @@ class DroneCamera():
         """
         self.file_path = file_path
 
-        self.image_data = {"image": None, "compressed": None,
-                           "depth": None,
+        self.image_data = {"image": None, "compressed": None, "depth": None,
                            "theora": None}
         self.success_flags = {"image": False, "compressed": False,
-                              "depth": False,
-                              "theora": False, "isOpened": False}
+                              "depth": False, "theora": False,
+                              "isOpened": False}
         self.current_tilt = 0.0
         self.current_pan = 0.0
         self.param_listener = ParameterListener(self)
@@ -51,6 +49,7 @@ class DroneCamera():
 
         self.pubs = {}
         self.subs = {}
+        rospy.loginfo("DroneCamera initialized.")
 
     """Section 1: Initializing the camera topics."""
 
@@ -66,6 +65,7 @@ class DroneCamera():
             elif topic == 'set_exposure':
                 self.pubs['set_exposure'] = rospy.Publisher(
                     '/bebop/set_exposure', Float32, queue_size=10)
+        rospy.loginfo("Initialized publishers for camera control.")
 
     def init_subscribers(self, topics: List[str]) -> None:
         """Initialize subscribers for the given ROS topics."""

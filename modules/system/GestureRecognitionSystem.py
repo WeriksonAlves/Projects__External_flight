@@ -51,7 +51,7 @@ class GestureRecognitionSystem:
         self.hand_extractor = hand_extractor_model
         self.body_extractor = body_extractor_model
         self.classifier = classifier
-        self.B = bebop
+        self.bebop = bebop
 
         # Initialize system components
         self.__initialize_system()
@@ -336,8 +336,8 @@ class GestureRecognitionSystem:
                 results_people)
             success, cropped_image = self.tracker.crop_operator(
                 bounding_box, track_id, annotated_frame, frame)
-            if self.B is not None:
-                self.B.ajust_camera(frame, bounding_box)
+            if self.bebop is not None:
+                self.bebop.ajust_camera(frame, bounding_box)
             return cropped_image if success else None
         except Exception as e:
             rospy.logerr(f"Error during operator detection and tracking: {e}")
@@ -542,10 +542,12 @@ class GestureRecognitionSystem:
         Classifies gestures in real-time mode and resets sample data for the
         next classification.
         """
-        self.__predict_gesture()
+        prediction = self.__predict_gesture()
+        if self.bebop is not None:
+            self.bebop.send_command_uav(prediction)
         self.__initialize_storage_variables()
 
-    def __predict_gesture(self) -> None:
+    def __predict_gesture(self) -> str:
         """
         Predicts the gesture class based on reduced data and logs the
         classification time.
@@ -564,3 +566,5 @@ class GestureRecognitionSystem:
         )
         rospy.loginfo(f"\nThe gesture belongs to class {predicted_class} and "
                       f"took {classification_time:.3f}ms to classify.\n")
+        
+        return predicted_class

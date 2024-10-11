@@ -1,4 +1,5 @@
 from .DroneCamera import DroneCamera
+from .DroneControl import DroneControl
 from functools import wraps
 from geometry_msgs.msg import Twist
 from typing import List, Optional, Tuple
@@ -33,7 +34,9 @@ class BebopROS:
         """
         self.file_path = os.path.join(main_dir, 'images')
         self.drone_type = drone_type
+        self.simulation = True
         self.camera = DroneCamera(self.file_path)
+        self.control = DroneControl()
 
     """Section 1: Bebop camera-related methods"""
 
@@ -114,3 +117,22 @@ class BebopROS:
             box_y - frame_center[1]) / frame_center[1] - drone_pitch
 
         return dist_to_center_h, dist_to_center_v
+
+    """Section 2: Bebop control-related methods"""
+
+    def send_command_uav(self, command: str) -> None:
+        """
+        Sends a command to the UAV.
+        """
+        if command == 'L':
+            pass
+        elif command == 'I':
+            rospy.loginfo("Sending land command to Bebop.")
+            self.control.land(self.simulation)
+        if command == 'F':
+            pass
+        elif command == 'P':
+            rospy.loginfo("Sending takeoff command to Bebop.")
+            self.control.takeoff(self.simulation)
+        elif command == 'T':
+            pass
