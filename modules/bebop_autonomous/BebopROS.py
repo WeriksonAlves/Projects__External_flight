@@ -26,16 +26,16 @@ class BebopROS:
     and handling communication with ROS (Robot Operating System).
     """
 
-    def __init__(self, main_dir=os.path.dirname(__file__), drone_type="Bebop2",
-                 ip_address=None):
+    def __init__(self, drone_type="Bebop2", ip_address=None):
         """
         Initializes BebopROS with a predefined file path for saving images and
         drone type.
         """
-        self.file_path = os.path.join(main_dir, 'images')
+        self.main_dir = os.path.dirname(__file__)
+        self.file_path = os.path.join(self.main_dir, 'images')
         self.drone_type = drone_type
         self.simulation = True
-        self.camera = DroneCamera(self.file_path)
+        self.camera = DroneCamera(self.file_path, 10)
         self.control = DroneControl()
 
     """Section 1: Bebop camera-related methods"""
@@ -118,21 +118,45 @@ class BebopROS:
 
         return dist_to_center_h, dist_to_center_v
 
-    """Section 2: Bebop control-related methods"""
+    """Section 2: Bebop action-related methods"""
 
-    def send_command_uav(self, command: str) -> None:
+    def send_command_uav(self, command: str, simulation: bool = True) -> None:
         """
         Sends a command to the UAV.
         """
         if command == 'L':
-            pass
-        elif command == 'I':
             rospy.loginfo("Sending land command to Bebop.")
-            self.control.land(self.simulation)
+            if not simulation:
+                self.land()
+        elif command == 'I':
+            rospy.loginfo("Sending inspection command to Bebop.")
+            if not simulation:
+                self.control.inspection()
         if command == 'F':
-            pass
+            rospy.loginfo("Sending follow me command to Bebop.")
+            if not simulation:
+                self.control.follow_me()
         elif command == 'P':
-            rospy.loginfo("Sending takeoff command to Bebop.")
-            self.control.takeoff(self.simulation)
+            rospy.loginfo("Sending photography command to Bebop.")
+            if not simulation:
+                self.control.take_picture()
         elif command == 'T':
-            pass
+            rospy.loginfo("Sending takeoff command to Bebop.")
+            if not simulation:
+                self.takeoff()
+
+    
+    """Section 3: Bebop control-related methods"""
+
+    def land(self) -> None:
+        """
+        Sends a landing command to the drone.
+        """
+        self.control.land()
+
+    def takeoff(self) -> None:
+        """
+        Sends a takeoff command to the drone.
+        """
+        self.control.takeoff()
+    

@@ -56,7 +56,7 @@ class GestureRecognitionSystem:
         # Initialize system components
         self.__initialize_system()
 
-    @MyTimer.timing_decorator()
+    # @MyTimer.timing_decorator()
     def __initialize_system(self) -> None:
         """Initializes the gesture recognition system."""
         if not (self.__initialize_operation(
@@ -301,6 +301,7 @@ class GestureRecognitionSystem:
             self.classify_gestures()
             self.stage = 0
 
+    # @MyTimer.timing_decorator()
     def process_frame(self) -> bool:
         """
         Reads the frame, processes tracking, and extracts features.
@@ -317,6 +318,7 @@ class GestureRecognitionSystem:
             print("Failed to read frame from camera.")
         return False
 
+    # @MyTimer.timing_decorator()
     def read_image(self) -> Tuple[bool, np.ndarray]:
         """
         Reads the next image frame from the captured stream.
@@ -325,6 +327,7 @@ class GestureRecognitionSystem:
         with self.frame_lock:
             return self.frame_captured is not None, self.frame_captured
 
+    # @MyTimer.timing_decorator()
     def tracking_processor(self, frame: np.ndarray) -> Union[np.ndarray, None]:
         """
         Detects and tracks the operator from the given frame.
@@ -343,6 +346,7 @@ class GestureRecognitionSystem:
             rospy.logerr(f"Error during operator detection and tracking: {e}")
             return None
 
+    # @MyTimer.timing_decorator()
     def extraction_processor(self, cropped_image: np.ndarray) -> bool:
         """
         Extracts hand and wrist features and updates gesture stage.
@@ -390,6 +394,7 @@ class GestureRecognitionSystem:
         self.body_history = np.concatenate((self.body_history,
                                             [self.body_history[-1]]), axis=0)
 
+    # @MyTimer.timing_decorator()
     def track_hand_gesture(self, cropped_image: np.ndarray) -> None:
         """
         Tracks hand gestures using feature extraction.
@@ -457,6 +462,7 @@ class GestureRecognitionSystem:
         dist_point = np.sqrt(std_dev[0] ** 2 + std_dev[1] ** 2)
         return dist_point < dist, storage, dist_point
 
+    # @MyTimer.timing_decorator()
     def track_wrist_movement(self, cropped_image: np.ndarray) -> None:
         """
         Tracks wrist movements using pose extraction.
@@ -566,5 +572,5 @@ class GestureRecognitionSystem:
         )
         rospy.loginfo(f"\nThe gesture belongs to class {predicted_class} and "
                       f"took {classification_time:.3f}ms to classify.\n")
-        
+
         return predicted_class

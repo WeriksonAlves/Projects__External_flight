@@ -10,6 +10,7 @@ import cv2
 import numpy as np
 import os
 import rospy
+import time
 
 
 class DroneCamera():
@@ -19,7 +20,7 @@ class DroneCamera():
     topics.
     """
 
-    def __init__(self, file_path: str = os.path.dirname(__file__)):
+    def __init__(self, file_path: str = os.path.dirname(__file__), fps: int = 30):
         """
         Initialize the DroneCamera object with publishers, subscribers, and
         image handling.
@@ -44,6 +45,8 @@ class DroneCamera():
                               "isOpened": False}
         self.current_tilt = 0.0
         self.current_pan = 0.0
+        self.fps = fps
+        self.current_time = time.time()
         self.param_listener = ParameterListener(self)
         self.bridge = CvBridge()
 
@@ -97,28 +100,38 @@ class DroneCamera():
 
     def _process_raw_image(self, data: Image) -> None:
         """Process and save raw image data."""
-        self.__save_and_load_image(data, "image_raw.png", "image",
-                                   use_cv_bridge=True)
+        if time.time() - self.current_time > (1/self.fps):
+            self.current_time = time.time()
+            self.__save_and_load_image(data, "image_raw.png", "image",
+                                       use_cv_bridge=True)
 
     def _process_compressed_image(self, data: CompressedImage) -> None:
         """Process and save compressed image data."""
-        self.__save_and_load_image(data, "compressed.png",
-                                   "compressed")
+        if time.time() - self.current_time > (1/self.fps):
+            self.current_time = time.time()
+            self.__save_and_load_image(data, "compressed.png",
+                                       "compressed")
 
     def _process_compressed_depth_image(self, data: CompressedImage) -> None:
         """Process and save compressed depth image data."""
-        self.__save_and_load_image(data, "depth.png",
-                                   "depth")
+        if time.time() - self.current_time > (1/self.fps):
+            self.current_time = time.time()
+            self.__save_and_load_image(data, "depth.png",
+                                       "depth")
 
     def _process_theora_image(self, data: CompressedImage) -> None:
         """Process and save Theora-encoded image data."""
-        self.__save_and_load_image(data, "theora.png", "theora")
+        if time.time() - self.current_time > (1/self.fps):
+            self.current_time = time.time()
+            self.__save_and_load_image(data, "theora.png", "theora")
 
     def _process_camera_orientation(self, data: Ardrone3CameraStateOrientation
                                     ) -> None:
         """Process camera orientation changes."""
-        self.current_tilt = data.tilt
-        self.current_pan = data.pan
+        if time.time() - self.current_time > (1/self.fps):
+            self.current_time = time.time()
+            self.current_tilt = data.tilt
+            self.current_pan = data.pan
 
     def __save_and_load_image(self, data: CompressedImage, filename: str,
                               img_type: str, use_cv_bridge=False) -> None:

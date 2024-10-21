@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import torch
 from ..interfaces import TrackerInterface
 from collections import defaultdict
 from ultralytics import YOLO
@@ -34,6 +35,9 @@ class MyYolo(TrackerInterface):
         :param yolo_model_path: Path to the YOLO model file.
         """
         self.yolo_model = YOLO(yolo_model_path)
+        torch.set_num_threads(4)
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.yolo_model = self.yolo_model.to(device)
         self.track_history = defaultdict(list)
 
     @ensure_valid_frame
@@ -50,10 +54,14 @@ class MyYolo(TrackerInterface):
         :return: Tuple containing the detection results and the annotated
         frame.
         """
-        detection_results = self.yolo_model.track(frame, persist=persist,
-                                                  verbose=verbose)
-        annotated_frame = detection_results[0].plot()
-        return detection_results, annotated_frame
+        detection_results = self.yolo_model.track(frame,
+                                                  persist=persist,
+                                                  verbose=verbose,
+                                                  stream=True)
+        for result in detection_results:
+            annotated_frame = result.plot()
+            # Use the first detection result and break the loop
+            return result, annotated_frame
 
     def identify_operator(self, detection_results: List[Results]
                           ) -> Tuple[np.ndarray, List[int]]:
